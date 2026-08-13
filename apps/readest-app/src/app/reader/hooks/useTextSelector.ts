@@ -1,0 +1,616 @@
+import { useEffect, useRef } from 'react';
+import { BookNote } from '@/types/book';
+import { Insets } from '@/types/misc';
+import { useEnv } from '@/context/EnvContext';
+import { useReaderStore } from '@/store/readerStore';
+import { useBookDataStore } from '@/store/bookDataStore';
+import { eventDispatcher } from '@/utils/event';
+import {
+  focusCaretWindowPos,
+  getCaretPointFromPoint,
+  getWordRangeFromPoint,
+  isPointerInsideSelection,
+  Point,
+  TextSelection,
+  trimRangeWhitespaceAroundPoint,
+} from '@/utils/sel';
+import { Corner, useAutoPageTurn } from './useAutoPageTurn';
+import { useInstantAnnotation } from './useInstantAnnotation';
+
+// Instant-highlight quick action: on touch a plain tap and a swipe are both
+// page-turn gestures, so the highlight must not engage on pointer-down or it
+// swallows the tap/swipe (an Android tap-to-paginate regression). It only engages
+// after the finger has held still on the text for this long; a tap releases first
+// and a swipe moves first, so both fall through to pagination. Mouse input is not
+// gated — a click vs. a press-drag is already unambiguous.
+const INSTANT_HOLD_MS = 300;
+// Movement past this many CSS px during the hold means the user is swiping, not
+// settling in to highlight, so the pending engagement is cancelled.
+const INSTANT_HOLD_MOVE_PX = 10;
+// Ignore tiny pointer jitter, but preserve a deliberate double-click-drag even
+// when it only extends the selection into adjacent whitespace.
+const DOUBLE_CLICK_DRAG_MOVE_PX = 3;
+
+export const useTextSelector = (
+  bookKey: string,
+  contentInsets: Insets,
+  setSelection: React.Dispatch<React.SetStateAction<TextSelection | null>>,
+  setEditingAnnotation: React.Dispatch<React.SetStateAction<BookNote | null>>,
+  setExternalDragPoint: React.Dispatch<React.SetStateAction<Point | null>>,
+  getAnnotationText: (range: Range) => Promise<string>,
+  handleDismissPopup: () => void,
+) => {
+  const { appService } = useEnv();
+  const { getBookData } = useBookDataStore();
+  const { getView, getViewSettings, getProgress } = useReaderStore();
+  const view = getView(bookKey);
+  const bookData = getBookData(bookKey);
+
+  // Corner-dwell auto page-turn (#1354), now driven by every selection gesture
+  // through a shared engagement point — see useAutoPageTurn.
+  const {
+    cornerAtPoint,
+    noteCorner,
+    noteAutoTurnPoint,
+    cancel: cancelAutoTurn,
+    onAfterTurn,
+  } = useAutoPageTurn(bookKey, contentInsets);
+
+  const isPopuped = useRef(false);
+  const isUpToPopup = useRef(false);
+  const isTextSelected = useRef(false);
+  const isTouchStarted = useRef(false);
+  // A touch selectionchange deferred until the gesture ends: iOS streams
+  // selectionchange while a finger drags the system selection handles, and
+  // the Annotator hides the popup on every touchmove — re-showing it per
+  // change made the annotation toolbar flash. Processed in handleTouchEnd.
+  const pendingTouchSelection = useRef(false);
+  const lastPointerType = useRef<string>('mouse');
+  // Whether a pointer drag (mouse/touch selection) is currently in progress.
+  // Desktop selections defer to pointerup, but a keyboard selection adjustment
+  // (#4728) has no pointer drag — handleSelectionchange uses this to refresh the
+  // popup/range for keyboard-driven changes while still deferring mid-drag.
+  const isPointerDown = useRef(false);
+  const isInstantAnnotating = useRef(false);
+  const isInstantAnnotated = useRef(false);
+  const annotationStartPoint = useRef<Point | null>(null);
+  // The element instant annotating set `user-select: none` on, so the exact same
+  // element is restored on release (the pointerup target may differ once the
+  // finger has moved across nodes).
+  const instantAnnotationTarget = useRef<HTMLElement | null>(null);
+  // Unsubscribe for the after-turn re-emit: while instant annotating, a corner
+  // auto-turn rebuilds the preview from the held position onto the new page.
+  const instantReemitUnsub = useRef<(() => void) | null>(null);
+  // Pending instant-highlight still-hold (touch/pen). While a hold is in flight
+  // these remember the press so the timer can engage at the same spot; the gate
+  // is armed in handlePointerDown and dropped by a release or a swipe.
+  const instantHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instantHoldTarget = useRef<HTMLElement | null>(null);
+  const instantHoldStartClient = useRef<Point | null>(null);
+  const instantHoldStartWindow = useRef<{ x: number; y: number } | null>(null);
+  // Latest pointer position in window coords (from pointermove): an auto-turn
+  // engagement signal alongside the caret.
+  const pointerPos = useRef<{ x: number; y: number } | null>(null);
+  const mouseDoubleClickRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+
+  // While we mutate the DOM selection ourselves (handle suppression, custom
+  // handle drags), selectionchange events are echoes of our own writes —
+  // handleSelectionchange must ignore them. Cleared on a delay because
+  // selectionchange dispatches a task after the mutation.
+  const programmaticSelectionRef = useRef(false);
+  const programmaticClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const guardProgrammaticSelection = () => {
+    if (programmaticClearTimer.current) clearTimeout(programmaticClearTimer.current);
+    programmaticSelectionRef.current = true;
+  };
+
+  const releaseProgrammaticSelection = () => {
+    if (programmaticClearTimer.current) clearTimeout(programmaticClearTimer.current);
+    programmaticClearTimer.current = setTimeout(() => {
+      programmaticSelectionRef.current = false;
+    }, 150);
+  };
+
+  const {
+    isInstantAnnotationEnabled,
+    handleInstantAnnotationPointerDown,
+    handleInstantAnnotationEngage,
+    handleInstantAnnotationPointerMove,
+    handleInstantAnnotationPointerCancel,
+    handleInstantAnnotationPointerUp,
+    reapplyInstantAnnotation,
+  } = useInstantAnnotation({
+    bookKey,
+    getAnnotationText,
+    setSelection,
+    setEditingAnnotation,
+    setExternalDragPoint,
+  });
+
+  const isValidSelection = (sel: Selection) => {
+    return sel && sel.toString().trim().length > 0 && sel.rangeCount > 0;
+  };
+
+  const makeSelection = async (
+    sel: Selection,
+    index: number,
+    rebuildRange = false,
+    handlesSuppressed = false,
+    trimPoint?: { node: Node; offset: number } | null,
+  ) => {
+    isTextSelected.current = true;
+    const liveRange = sel.getRangeAt(0);
+    if (rebuildRange) {
+      sel.removeAllRanges();
+      sel.addRange(liveRange);
+    }
+    // Selection.getRangeAt() returns the live, associated Range by reference.
+    // Clone only for double-click normalization so native touch paths retain
+    // their established Range behavior and browser handles stay untouched.
+    const range = trimPoint ? liveRange.cloneRange() : liveRange;
+    if (trimPoint) trimRangeWhitespaceAroundPoint(range, trimPoint.node, trimPoint.offset);
+    const progress = getProgress(bookKey);
+    setSelection({
+      key: bookKey,
+      text: await getAnnotationText(range),
+      cfi: view?.getCFI(index, range),
+      page: bookData?.isFixedLayout ? index + 1 : progress?.page || 0,
+      range,
+      index,
+      handlesSuppressed,
+    });
+  };
+
+  const startInstantAnnotating = (target: HTMLElement, startPoint: Point) => {
+    isInstantAnnotating.current = true;
+    isInstantAnnotated.current = false;
+    annotationStartPoint.current = startPoint;
+    instantAnnotationTarget.current = target;
+    if (view) view.renderer.scrollLocked = true;
+    target.style.userSelect = 'none';
+    instantReemitUnsub.current?.();
+    instantReemitUnsub.current = onAfterTurn(() => reapplyInstantAnnotation());
+  };
+
+  const stopInstantAnnotating = () => {
+    isInstantAnnotating.current = false;
+    isInstantAnnotated.current = false;
+    annotationStartPoint.current = null;
+    if (view) view.renderer.scrollLocked = false;
+    instantReemitUnsub.current?.();
+    instantReemitUnsub.current = null;
+    if (instantAnnotationTarget.current) {
+      instantAnnotationTarget.current.style.userSelect = '';
+      instantAnnotationTarget.current = null;
+    }
+  };
+
+  // Drop a pending still-hold without engaging (tap released early, finger
+  // swiped, or the gesture was cancelled).
+  const cancelInstantHold = () => {
+    if (instantHoldTimer.current) {
+      clearTimeout(instantHoldTimer.current);
+      instantHoldTimer.current = null;
+    }
+    instantHoldTarget.current = null;
+    instantHoldStartClient.current = null;
+    instantHoldStartWindow.current = null;
+  };
+
+  // Begin the touch still-hold: engage the instant annotation only once the
+  // finger has stayed put on the text for INSTANT_HOLD_MS. preventDefault is NOT
+  // called here, so a tap or swipe that bows out keeps its native page-turn.
+  // The native long-press selection needs no suppression here: instant mode
+  // makes the content non-selectable at the stylesheet level (getStyles) —
+  // JS-applied user-select at pointer-down proved too late for iOS WebKit's
+  // long-press recognizer.
+  const armInstantHold = (doc: Document, index: number, ev: PointerEvent) => {
+    const feRect = doc.defaultView?.frameElement?.getBoundingClientRect();
+    instantHoldTarget.current = ev.target as HTMLElement;
+    instantHoldStartClient.current = { x: ev.clientX, y: ev.clientY };
+    instantHoldStartWindow.current = {
+      x: ev.clientX + (feRect?.left ?? 0),
+      y: ev.clientY + (feRect?.top ?? 0),
+    };
+    if (instantHoldTimer.current) clearTimeout(instantHoldTimer.current);
+    instantHoldTimer.current = setTimeout(() => {
+      instantHoldTimer.current = null;
+      const target = instantHoldTarget.current;
+      const startClient = instantHoldStartClient.current;
+      const start = instantHoldStartWindow.current;
+      const now = pointerPos.current;
+      cancelInstantHold();
+      if (!target || !startClient) return;
+      // Backstop the move-driven cancel: if the finger drifted during the hold,
+      // treat it as a swipe and bow out.
+      if (start && now && Math.hypot(now.x - start.x, now.y - start.y) > INSTANT_HOLD_MOVE_PX) {
+        handleInstantAnnotationPointerCancel();
+        return;
+      }
+      startInstantAnnotating(target, startClient);
+      // Preview the word under the finger right away (the feedback the
+      // suppressed system long-press selection used to give); a release
+      // without a drag commits it and opens the range editor.
+      handleInstantAnnotationEngage(doc, index);
+    }, INSTANT_HOLD_MS);
+  };
+
+  // While a still-hold is pending, a move past the threshold means the user is
+  // swiping to turn the page — cancel so the swipe isn't swallowed.
+  const maybeCancelInstantHoldOnMove = () => {
+    const start = instantHoldStartWindow.current;
+    const now = pointerPos.current;
+    if (!instantHoldTimer.current || !start || !now) return;
+    if (Math.hypot(now.x - start.x, now.y - start.y) > INSTANT_HOLD_MOVE_PX) {
+      cancelInstantHold();
+      handleInstantAnnotationPointerCancel();
+    }
+  };
+
+  const handlePointerDown = (doc: Document, index: number, ev: PointerEvent) => {
+    lastPointerType.current = ev.pointerType;
+    isPointerDown.current = true;
+
+    if (isInstantAnnotationEnabled()) {
+      const eligible = handleInstantAnnotationPointerDown(doc, index, ev);
+      if (!eligible) return;
+      const isTouch = ev.pointerType === 'touch' || ev.pointerType === 'pen';
+      if (isTouch) {
+        // Touch: gate behind a still hold so a tap or swipe still turns the page.
+        armInstantHold(doc, index, ev);
+      } else {
+        // Mouse: a press-drag is an unambiguous highlight intent; engage at once.
+        ev.preventDefault();
+        startInstantAnnotating(ev.target as HTMLElement, { x: ev.clientX, y: ev.clientY });
+      }
+    }
+  };
+
+  // UI Events exposes the current click count on mousedown (`detail`). Record
+  // the second primary-button press before pointerup publishes the native word
+  // selection, so any browser-added separator can be removed exactly once.
+  const handleMouseDown = (ev: MouseEvent) => {
+    const doubleClickEnabled = !getViewSettings(bookKey)?.disableDoubleClick;
+    mouseDoubleClickRef.current =
+      doubleClickEnabled && ev.button === 0 && ev.detail === 2
+        ? { x: ev.clientX, y: ev.clientY, moved: false }
+        : null;
+  };
+
+  const handlePointerMove = (doc: Document, index: number, ev: PointerEvent) => {
+    const doubleClick = mouseDoubleClickRef.current;
+    if (
+      doubleClick &&
+      ev.pointerType === 'mouse' &&
+      Math.hypot(ev.clientX - doubleClick.x, ev.clientY - doubleClick.y) >=
+        DOUBLE_CLICK_DRAG_MOVE_PX
+    ) {
+      doubleClick.moved = true;
+    }
+    // The listener lives on the book iframe's document, so ev.clientX/Y are in
+    // the (very wide, multi-column) iframe viewport. Map to window coordinates
+    // via the iframe element's on-screen rect, like the selection caret.
+    const feRect = doc.defaultView?.frameElement?.getBoundingClientRect();
+    pointerPos.current = {
+      x: ev.clientX + (feRect?.left ?? 0),
+      y: ev.clientY + (feRect?.top ?? 0),
+    };
+    maybeCancelInstantHoldOnMove();
+    if (isInstantAnnotating.current) {
+      // In scroll mode, detect gesture direction before committing to annotation.
+      // Cancel if the gesture is along the scroll axis (vertical for normal, horizontal
+      // for vertical writing mode) since the user likely intends to scroll.
+      if (!isInstantAnnotated.current && annotationStartPoint.current) {
+        const dx = Math.abs(ev.clientX - annotationStartPoint.current.x);
+        const dy = Math.abs(ev.clientY - annotationStartPoint.current.y);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const viewSettings = getViewSettings(bookKey);
+        const isScrollGesture = viewSettings?.vertical ? dy < 3 * dx : dx < 3 * dy;
+        if (distance >= 10 && isScrollGesture) {
+          stopInstantAnnotating();
+          handleInstantAnnotationPointerCancel();
+          return;
+        }
+      }
+      ev.preventDefault();
+      isInstantAnnotated.current = handleInstantAnnotationPointerMove(doc, index, ev);
+      // Cross-page instant highlight: feed the finger corner into the same dwell
+      // machine native selection uses, so the page turns and the highlight
+      // continues across the boundary (the start is DOM-anchored in
+      // useInstantAnnotation so it survives the scroll).
+      noteAutoTurnPoint(getViewSettings(bookKey)?.scrolled ? null : pointerPos.current);
+      return;
+    }
+
+    // Pointer-driven auto page-turn (#1354) for web/desktop, where the
+    // pointer is the reliable, stable signal at the corner.
+    const viewSettings = getViewSettings(bookKey);
+    const sel = doc.getSelection();
+    const valid = !!sel && isValidSelection(sel);
+    const corner = !viewSettings?.scrolled && valid ? pointerCornerNow() : null;
+    noteCorner(corner, (c) => inCorner(c, doc));
+  };
+
+  const handlePointerCancel = (_doc: Document, _index: number, _ev: PointerEvent) => {
+    isPointerDown.current = false;
+    mouseDoubleClickRef.current = null;
+    // A pending still-hold that never engaged: drop it so a swipe-takeover
+    // (Android fires pointercancel when the browser starts scrolling) keeps its
+    // native page-turn instead of being swallowed.
+    cancelInstantHold();
+    // NB: don't cancel the auto-turn here — on Android pointercancel fires mid
+    // edge-drag (browser takes over for scrolling), which is exactly when the
+    // user is dragging into the corner. Cancel only on a real release.
+    if (isInstantAnnotating.current) {
+      stopInstantAnnotating();
+      handleInstantAnnotationPointerCancel();
+    }
+  };
+
+  // Replace the live DOM selection from the custom selection handles. Guarded
+  // so the resulting selectionchange echoes are ignored; a commit refreshes
+  // the selection state (and thus the popup) once the drag ends.
+  const applyProgrammaticSelection = async (range: Range, index: number, commit: boolean) => {
+    const doc = range.startContainer.ownerDocument;
+    const sel = doc?.getSelection();
+    if (!doc || !sel) return;
+    guardProgrammaticSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    if (commit) {
+      releaseProgrammaticSelection();
+      await makeSelection(sel, index, false, true);
+    }
+  };
+
+  // A double-click / touch double-tap on a word: select the word (like a
+  // long-press selection) and route it through the same selection state that
+  // drives the quick action / annotation toolbar. Desktop native selection is
+  // finalized in handlePointerUp; touch double-tap still needs this synthesized
+  // range when the platform has no native word-select gesture.
+  const handleDoubleClick = async (doc: Document, index: number, x: number, y: number) => {
+    if (isInstantAnnotating.current) return;
+    const sel = doc.getSelection();
+    if (!sel || isValidSelection(sel)) return;
+    const range = getWordRangeFromPoint(doc, x, y);
+    if (!range) return;
+    guardProgrammaticSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    releaseProgrammaticSelection();
+    // With the instant-highlight stylesheet suppression active, WebKit may
+    // refuse the programmatic selection on non-selectable content.
+    if (sel.rangeCount === 0) return;
+    // No isUpToPopup latch here: a double-tap is two taps both consumed by the
+    // double-click detection, so no trailing single-click follows that would
+    // dismiss the popup — the next deliberate tap should dismiss it normally.
+    await makeSelection(sel, index, false);
+  };
+
+  const handlePointerUp = async (doc: Document, index: number, ev?: PointerEvent) => {
+    isPointerDown.current = false;
+    const mouseDoubleClick = mouseDoubleClickRef.current;
+    mouseDoubleClickRef.current = null;
+    // A tap (or a long-press shorter than the hold) that never engaged: drop the
+    // pending still-hold so the tap falls through to a page turn.
+    if (instantHoldTimer.current) cancelInstantHold();
+    if (isInstantAnnotating.current && ev) {
+      stopInstantAnnotating();
+      const handled = await handleInstantAnnotationPointerUp(doc, index, ev);
+      if (handled === 'editor') {
+        // The hold committed a word highlight and left the range editor open.
+        // Consume the trailing click with the "this release leads to a popup"
+        // latch (same as the selection popup flow) — the 200ms isTextSelected
+        // latch below would let the click dismiss the fresh editor instead.
+        isUpToPopup.current = true;
+        return;
+      }
+      if (handled) {
+        isTextSelected.current = true;
+        setTimeout(() => {
+          isTextSelected.current = false;
+        }, 200);
+        return;
+      } else {
+        // If instant annotation was not created, we let the event propagate
+        // as an iframe click event which relies on a mousedown event
+        (ev.target as Element)?.dispatchEvent(
+          new MouseEvent('mousedown', {
+            ...ev,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+    }
+
+    // Available on iOS and Desktop, fired at touchend or mouseup.
+    const sel = doc.getSelection() as Selection;
+    if (isValidSelection(sel)) {
+      const isPointerInside = ev && isPointerInsideSelection(sel, ev);
+      let trimPoint: { node: Node; offset: number } | null = null;
+      if (
+        isPointerInside &&
+        ev.pointerType === 'mouse' &&
+        mouseDoubleClick &&
+        !mouseDoubleClick.moved
+      ) {
+        trimPoint = getCaretPointFromPoint(doc, mouseDoubleClick.x, mouseDoubleClick.y);
+      }
+
+      // iOS no longer needs a special path: the native plugin
+      // (ContextMenuSuppressor) suppresses the system selection menu, so
+      // iOS selections go through the same path as desktop.
+      if (isPointerInside) {
+        isUpToPopup.current = true;
+        makeSelection(sel, index, true, false, trimPoint);
+      }
+    }
+  };
+  const handleTouchStart = () => {
+    isTouchStarted.current = true;
+    pendingTouchSelection.current = false;
+    // Pointer positions are per-gesture: a stale point from a previous touch
+    // must not steer this gesture's selection repair. Touch moves re-feed it.
+    pointerPos.current = null;
+  };
+  const handleTouchMove = (ev: TouchEvent) => {
+    if (isInstantAnnotating.current) {
+      ev.preventDefault();
+    }
+  };
+  // Ends the touch gesture and processes a selectionchange that was deferred
+  // while the finger was down (see handleSelectionchange): the selection state
+  // updates once, so the annotation popup appears once, at the release.
+  const handleTouchEnd = (doc: Document, index: number) => {
+    isTouchStarted.current = false;
+    if (!pendingTouchSelection.current) return;
+    pendingTouchSelection.current = false;
+    const sel = doc.getSelection();
+    if (sel && isValidSelection(sel)) {
+      makeSelection(sel, index, false);
+    } else if (isTextSelected.current) {
+      handleDismissPopup();
+      isTextSelected.current = false;
+    }
+  };
+
+  // The corner the latest pointer position is in.
+  const pointerCornerNow = (): Corner | null => cornerAtPoint(pointerPos.current);
+  // The corner the selection caret (focus) is in.
+  const caretCornerNow = (doc: Document): Corner | null => {
+    const sel = doc.getSelection();
+    if (!sel || !isValidSelection(sel)) return null;
+    return cornerAtPoint(focusCaretWindowPos(doc, sel));
+  };
+  // Whether any input signal (pointer/touch or caret) is currently in corner `c`.
+  // Injected into the dwell machine as the native-selection liveness predicate so
+  // the page only turns while the caret OR the finger is still in the corner.
+  const inCorner = (c: Corner, doc: Document): boolean =>
+    pointerCornerNow() === c || caretCornerNow(doc) === c;
+
+  const handleSelectionchange = (doc: Document, index: number) => {
+    // Echo of our own programmatic selection writes (handle suppression or a
+    // custom-handle drag) — not user input.
+    if (programmaticSelectionRef.current) return;
+
+    // Available on iOS and Desktop, fired when the selection is changed.
+    // On web with touch/pen in scroll mode, pointerup never fires (pointercancel
+    // fires instead when browser takes over for scrolling), so we also handle
+    // selectionchange for touch/pen input to pick up native text selections.
+    const isTouchInput = lastPointerType.current === 'touch' || lastPointerType.current === 'pen';
+    const sel = doc.getSelection() as Selection;
+    const viewSettings = getViewSettings(bookKey);
+
+    // Auto page-turn (#1354): the selection caret is one of the engagement
+    // signals on every platform. Feed it into the same dwell machine the
+    // pointer uses.
+    if (isValidSelection(sel)) {
+      noteCorner(!viewSettings?.scrolled ? caretCornerNow(doc) : null, (c) => inCorner(c, doc));
+    } else {
+      cancelAutoTurn();
+    }
+
+    // Desktop mouse selections defer to pointerup, but a keyboard selection
+    // adjustment (#4728) has no pointerup — process it as long as a pointer drag
+    // isn't in progress (mid-drag still defers to pointerup).
+    if (!isTouchInput && isPointerDown.current) return;
+    // Touch drags in paginated mode (iOS/web): the system handle drag streams
+    // selectionchange while the Annotator's touchmove handler hides the popup;
+    // processing each change re-showed it and made the toolbar flash. Defer to
+    // the gesture end (handleTouchEnd). Scroll mode keeps the immediate path —
+    // there the gesture can end in pointercancel with no processing after it.
+    if (isTouchInput && isTouchStarted.current && !viewSettings?.scrolled) {
+      pendingTouchSelection.current = true;
+      return;
+    }
+    if (isValidSelection(sel)) {
+      makeSelection(sel, index, false);
+    } else {
+      // Selection cleared (e.g. clicking outside the selection).
+      // Dismiss immediately on all platforms.
+      if (isTextSelected.current) {
+        handleDismissPopup();
+        isTextSelected.current = false;
+      }
+    }
+  };
+
+  const handleShowPopup = (showPopup: boolean) => {
+    setTimeout(() => {
+      if (showPopup && !isPopuped.current) {
+        isUpToPopup.current = false;
+      }
+      isPopuped.current = showPopup;
+    }, 500);
+  };
+
+  const handleUpToPopup = () => {
+    isUpToPopup.current = true;
+  };
+
+  const handleContextmenu = (event: Event) => {
+    if (appService?.isMobile) {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    } else if (lastPointerType.current === 'touch' || lastPointerType.current === 'pen') {
+      event.preventDefault();
+      event.stopPropagation();
+      return false;
+    }
+    return;
+  };
+
+  useEffect(() => {
+    const handleSingleClick = (): boolean => {
+      if (isUpToPopup.current) {
+        isUpToPopup.current = false;
+        return true;
+      }
+      if (isTextSelected.current) {
+        handleDismissPopup();
+        isTextSelected.current = false;
+        view?.deselect();
+        return true;
+      }
+      if (isPopuped.current) {
+        handleDismissPopup();
+        return true;
+      }
+      return false;
+    };
+
+    eventDispatcher.onSync('iframe-single-click', handleSingleClick);
+    return () => {
+      eventDispatcher.offSync('iframe-single-click', handleSingleClick);
+      if (instantHoldTimer.current) clearTimeout(instantHoldTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return {
+    isTextSelected,
+    isInstantAnnotating,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    handleMouseDown,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerCancel,
+    handlePointerUp,
+    handleDoubleClick,
+    handleSelectionchange,
+    handleShowPopup,
+    handleUpToPopup,
+    handleContextmenu,
+    applyProgrammaticSelection,
+    // The shared corner auto-turn feed/cancel/subscribe, re-exposed so the range
+    // editors can drive the same machine from their overlay handle drags.
+    noteAutoTurnPoint,
+    cancelAutoTurn,
+    onAutoTurn: onAfterTurn,
+  };
+};
