@@ -6,17 +6,7 @@ import { TTSPlayerStyle } from '@/services/tts/types';
 import type { AnnotationLinkType } from '@/utils/deeplink';
 import { AnnotationToolType } from './annotator';
 
-export type BookFormat =
-  | 'EPUB'
-  | 'PDF'
-  | 'MOBI'
-  | 'AZW'
-  | 'AZW3'
-  | 'CBZ'
-  | 'FB2'
-  | 'FBZ'
-  | 'TXT'
-  | 'MD';
+export type BookFormat = 'EPUB';
 export type BookNoteType = 'bookmark' | 'annotation' | 'excerpt';
 export type ReadingStatus = 'unread' | 'reading' | 'finished' | 'abandoned';
 export type HighlightStyle = 'highlight' | 'underline' | 'squiggly';
@@ -34,8 +24,6 @@ export type ReadingRulerColor = 'transparent' | 'yellow' | 'green' | 'blue' | 'r
 export interface ParagraphModeConfig {
   enabled: boolean;
 }
-
-export const FIXED_LAYOUT_FORMATS: Set<BookFormat> = new Set(['PDF', 'CBZ']);
 
 /**
  * Lookup tables built from a Book[] for O(1) hash and metaHash queries during
@@ -176,7 +164,7 @@ export interface BookNote {
    * within the same section (chapter/spine item), in addition to the original
    * range identified by `cfi`. Defaults to false / undefined (single-range).
    * Only meaningful for annotations that have a `text` value; ignored for
-   * bookmarks and excerpts, and for fixed-layout formats (e.g. PDF).
+   * bookmarks and excerpts, and for fixed-layout books.
    */
   global?: boolean;
 
@@ -258,7 +246,6 @@ export interface BookStyle {
   spreadMode: 'auto' | 'none';
   keepCoverSpread: boolean;
   invertImgColorInDark: boolean;
-  applyThemeToPDF: boolean;
   contrast: number;
 }
 

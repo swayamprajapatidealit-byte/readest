@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   description,
   generator: 'Next.js',
   manifest: '/manifest.json',
-  keywords: ['epub', 'pdf', 'ebook', 'reader', 'readest', 'pwa'],
+  keywords: ['epub', 'ebook', 'reader', 'readest', 'pwa'],
   authors: [
     {
       name: 'readest',

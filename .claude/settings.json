@@ -129,7 +129,10 @@
       "Bash(rm -rf .github)",
       "Bash(rm -f packages/simplecc-wasm/OpenCC/.git packages/simplecc-wasm/.gitmodules *)",
       "Bash(git branch *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Read(//home/ideal38/ideal-it/readest/**)",
+      "Bash(pnpm run *)",
+      "Bash(awk '{print $2}')"
     ],
     "additionalDirectories": [
       "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC"

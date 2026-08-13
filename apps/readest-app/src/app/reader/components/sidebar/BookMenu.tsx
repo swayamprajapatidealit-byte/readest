@@ -11,7 +11,6 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useParallelViewStore } from '@/store/parallelViewStore';
 import { isWebAppPlatform } from '@/services/environment';
 import { eventDispatcher } from '@/utils/event';
-import { FIXED_LAYOUT_FORMATS } from '@/types/book';
 import { DOWNLOAD_READEST_URL } from '@/services/constants';
 import { saveViewSettings } from '@/helpers/settings';
 import { setProofreadRulesVisibility } from '@/app/reader/components/ProofreadRules';
@@ -116,7 +115,6 @@ const BookMenu: React.FC<BookMenuProps> = ({ menuClassName, setIsDropdownOpen })
       >
         <ul className='max-h-60 overflow-y-auto'>
           {getVisibleLibrary()
-            .filter((book) => !FIXED_LAYOUT_FORMATS.has(book.format))
             .filter((book) => !!book.downloadedAt)
             .slice(0, 20)
             .map((book) => (

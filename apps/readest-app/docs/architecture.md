@@ -202,18 +202,17 @@ cloud upload/download, `customOPDSStore`) is gone.
 
 ### 3.3 In-browser book engine
 
-EPUB / MOBI / KF8 / FB2 / CBZ / TXT / PDF parsing and rendering is **not**
-hand-rolled in this repo. The reader sits on top of `packages/foliate-js`, a
-forked copy of the Foliate JS engine. Readest's reader code in `app/reader` and
-the adapters under `src/services/annotation`, `src/services/nav`,
-`src/services/transformers`, and `src/services/rsvp` wrap that engine and add
-features (annotations, navigation, content transforms, vertical/Warichu
-support, classic mode overlays, etc.).
+EPUB parsing and rendering is **not** hand-rolled in this repo. The reader sits
+on top of `packages/foliate-js`, a forked copy of the Foliate JS engine (this
+fork only calls into its EPUB path; the engine's MOBI/FB2/comic-book/PDF
+modules ship in the package but are unused). Readest's reader code in
+`app/reader` and the adapters under `src/services/annotation`,
+`src/services/nav`, `src/services/transformers`, and `src/services/rsvp` wrap
+that engine and add features (annotations, navigation, content transforms,
+vertical/Warichu support, classic mode overlays, etc.).
 
-PDF rendering goes through `pdfjs-dist`, which is copied into
-`public/vendor/pdfjs` at build time (`pnpm setup-pdfjs`). Chinese conversion
-uses `simplecc-wasm` (`public/vendor/simplecc`), and Chinese segmentation uses
-`jieba-wasm` (`public/vendor/jieba`).
+Chinese conversion uses `simplecc-wasm` (`public/vendor/simplecc`), and Chinese
+segmentation uses `jieba-wasm` (`public/vendor/jieba`).
 
 ### 3.4 Service worker and offline
 

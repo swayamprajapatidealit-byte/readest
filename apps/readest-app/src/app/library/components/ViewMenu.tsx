@@ -75,7 +75,6 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ setIsDropdownOpen }) => {
   const sortByOptions = [
     { label: _('Title'), value: LibrarySortByType.Title },
     { label: _('Author'), value: LibrarySortByType.Author },
-    { label: _('Format'), value: LibrarySortByType.Format },
     { label: _('Series'), value: LibrarySortByType.Series },
     { label: _('Date Read'), value: LibrarySortByType.Updated },
     { label: _('Date Added'), value: LibrarySortByType.Created },

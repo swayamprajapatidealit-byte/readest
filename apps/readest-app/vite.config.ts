@@ -6,7 +6,6 @@ export default defineConfig({
   plugins: [vinext()],
   resolve: {
     alias: {
-      '@pdfjs': path.resolve('public/vendor/pdfjs'),
       '@simplecc': path.resolve('public/vendor/simplecc'),
     },
   },

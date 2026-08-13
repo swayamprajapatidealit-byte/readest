@@ -677,15 +677,6 @@ const RSVPControl = forwardRef<RSVPControlHandle, RSVPControlProps>(function RSV
       // Remove any existing RSVP highlight when starting new session
       removeRsvpHighlight();
 
-      // Check if format is supported (not PDF)
-      if (bookData.book.format === 'PDF') {
-        eventDispatcher.dispatch('toast', {
-          message: _('RSVP not supported for PDF'),
-          type: 'warning',
-        });
-        return;
-      }
-
       const primaryLanguage = bookData.book.primaryLanguage;
 
       // Create controller if not exists

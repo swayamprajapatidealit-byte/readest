@@ -73,7 +73,7 @@ used to look like and why they're gone.
   worker).
 
 - `apps/readest-app/public`
-  Static assets served to the frontend, including vendored PDF.js/simplecc/jieba
+  Static assets served to the frontend, including vendored simplecc/jieba
   builds copied in at build time, and `public/locales/*` (i18n translation
   files).
 

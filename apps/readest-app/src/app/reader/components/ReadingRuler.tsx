@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Insets } from '@/types/misc';
-import { BookFormat, FIXED_LAYOUT_FORMATS, ViewSettings } from '@/types/book';
+import { ViewSettings } from '@/types/book';
 import { FoliateView } from '@/types/view';
 import { useEnv } from '@/context/EnvContext';
 import { useReaderStore } from '@/store/readerStore';
@@ -208,7 +208,7 @@ interface ReadingRulerProps {
   position: number;
   opacity: number;
   color: keyof typeof READING_RULER_COLORS;
-  bookFormat: BookFormat;
+  isFixedLayout: boolean;
   viewSettings: ViewSettings;
   gridInsets: Insets;
 }
@@ -221,7 +221,7 @@ const ReadingRuler: React.FC<ReadingRulerProps> = ({
   position,
   opacity,
   color,
-  bookFormat,
+  isFixedLayout,
   viewSettings,
 }) => {
   const { envConfig } = useEnv();
@@ -270,17 +270,17 @@ const ReadingRuler: React.FC<ReadingRulerProps> = ({
   const scrolledPlacedRef = useRef(false);
   const scrolledPlacedDimensionRef = useRef(0);
 
-  const supportsLineSnap = !FIXED_LAYOUT_FORMATS.has(bookFormat);
+  const supportsLineSnap = !isFixedLayout;
   const columnCount = getView(bookKey)?.renderer?.columnCount ?? 1;
   const isMultiColumn = supportsLineSnap && !isVertical && columnCount > 1;
-  const baseRulerSize = calculateReadingRulerSize(lines, viewSettings, bookFormat);
+  const baseRulerSize = calculateReadingRulerSize(lines, viewSettings, isFixedLayout);
   // Symmetric breathing room on each side of the text block.
-  const padding = supportsLineSnap ? calculateReadingRulerPadding(viewSettings, bookFormat) : 0;
+  const padding = supportsLineSnap ? calculateReadingRulerPadding(viewSettings, isFixedLayout) : 0;
   // Fixed band size used until lines are measured and for non-snap fallbacks.
   const fallbackRulerSize = baseRulerSize + 2 * padding;
   // Cap the dynamic band at (lines + 1) line heights so a tall element (e.g. a
   // full-page image) inside the block doesn't expand the band to cover all of it.
-  const maxBandSize = calculateReadingRulerSize(lines + 1, viewSettings, bookFormat);
+  const maxBandSize = calculateReadingRulerSize(lines + 1, viewSettings, isFixedLayout);
   const baseColor = READING_RULER_COLORS[color] || READING_RULER_COLORS['yellow'];
 
   const clampPosition = useCallback(

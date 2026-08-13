@@ -24,7 +24,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         <meta name='apple-mobile-web-app-title' content='Readest' />
         <meta
           name='description'
-          content='Readest is an open-source eBook reader supporting EPUB, PDF, and sync across devices.'
+          content='Readest is an open-source eBook reader supporting EPUB and sync across devices.'
         />
         <meta name='format-detection' content='telephone=no' />
         <meta name='mobile-web-app-capable' content='yes' />

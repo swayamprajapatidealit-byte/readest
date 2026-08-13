@@ -347,8 +347,6 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
       handleTouchMove(ev);
     };
 
-    // Attach generic selection listeners for all formats, including PDF.
-    // For PDF, highlight/annotate may be limited by CFI support.
     const opts = { passive: false };
     detail.doc?.addEventListener('touchstart', handleTouchStart, opts);
     detail.doc?.addEventListener('touchmove', handleTouchmove, opts);
@@ -366,8 +364,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
         // Remember when the gesture started so the instant quick action can
         // require a long-press hold (touch only — mouse selections fire on
         // pointerup and shouldn't be time-gated).
-        pointerDownTimeRef.current =
-          (ev as PointerEvent).pointerType === 'mouse' ? 0 : Date.now();
+        pointerDownTimeRef.current = (ev as PointerEvent).pointerType === 'mouse' ? 0 : Date.now();
       },
       opts,
     );
@@ -759,8 +756,8 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
     };
 
     // Wait for the renderer to fire its first 'stabilized' event before
-    // arming the grace timer. If the renderer is missing (e.g. fixed-
-    // layout PDF teardown path) or never stabilizes within 10s, fall
+    // arming the grace timer. If the renderer is missing (e.g. a
+    // fixed-layout teardown path) or never stabilizes within 10s, fall
     // back to a plain time-based start so the page back-fill still
     // eventually runs.
     const view = getView(bookKey);
@@ -1166,8 +1163,8 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
    * tear them down. The original anchor highlight at `cfi` is left
    * untouched in either direction.
    *
-   * Hidden for fixed-layout formats (PDF/CBZ) because they don't expose
-   * a per-section text DOM we can scan.
+   * Hidden for fixed-layout books because they don't expose a per-section
+   * text DOM we can scan.
    */
   const handleToggleGlobal = () => {
     if (!selection || !selection.cfi || !selection.text) return;
@@ -1750,7 +1747,7 @@ const Annotator: React.FC<{ bookKey: string; contentInsets: Insets }> = ({
           tooltipText: _(label),
           Icon,
           onClick: handleProofread,
-          disabled: !supportsProofread(bookData.book?.format),
+          disabled: !supportsProofread(bookData.isFixedLayout),
         };
       case 'share':
         return { tooltipText: _(label), Icon, onClick: handleShare };

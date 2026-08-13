@@ -67,7 +67,7 @@ benchmark should:
   (en) / ~3.8 ms (zh) for a common term capped at 500 matches, ~64 ms en /
   ~52 ms zh for fuzzy over a 100 KB shelf, and 7 ms en / 31 ms zh cold nearby
   (zh pays Intl.Segmenter dictionary segmentation). These numbers exclude file
-  loading, EPUB/PDF parsing, and DOM text extraction.
+  loading, EPUB parsing, and DOM text extraction.
 - **`library-search-turso`** — measures the per-book `search.db` architecture
   (section text cached beside cover.png) on the same mixed en/zh corpus: build
   cost, per-DB open overhead (~1.2 ms), and query fan-out at 10/100/1000 books

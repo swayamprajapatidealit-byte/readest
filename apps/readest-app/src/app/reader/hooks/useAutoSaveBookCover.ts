@@ -83,21 +83,12 @@ interface RustRawCoverImage {
 
 /**
  * Try to extract the full-resolution cover from the original book file via
- * the Rust native parsers and write it to the lock-screen target. Dispatches
- * by `book.format`:
+ * the Rust native EPUB parser (`extract_epub_cover_full`: zip-extract the
+ * manifest cover-image entry, raw bytes, no resize) and write it to the
+ * lock-screen target.
  *
- *   - EPUB  → `extract_epub_cover_full` (zip-extract the manifest cover-image
- *             entry, raw bytes, no resize),
- *   - MOBI / AZW / AZW3 → `extract_mobi_cover_full` (re-run the EXTH 201/202
- *             cover lookup, raw image-record bytes, no resize).
- *
- * Other formats (PDF, FB2, CBZ, …) don't have a Rust full-cover extractor
- * yet — we return `false` so the caller falls back to the on-disk thumbnail
- * (which, for those formats, is the only artwork we have).
- *
- * Returns true on success, false when the native path is unavailable, the
- * format isn't supported, or the command failed (caller falls back to the
- * on-disk thumbnail).
+ * Returns true on success, false when the native path is unavailable or the
+ * command failed (caller falls back to the on-disk thumbnail).
  */
 async function tryWriteFullCoverFromBook(
   appService: ReturnType<typeof useEnv>['appService'],
@@ -161,19 +152,8 @@ async function tryWriteFullCoverFromBook(
 
 /**
  * Map a `Book.format` to the matching Rust full-cover Tauri command, or
- * `null` if no native extractor exists for the format. Kept as a small
- * pure helper so the dispatch table stays in one place — adding a new
- * format (e.g. PDF) only needs a one-line addition here.
+ * `null` if no native extractor exists for the format.
  */
 function pickFullCoverCommand(format: string): string | null {
-  switch (format) {
-    case 'EPUB':
-      return 'extract_epub_cover_full';
-    case 'MOBI':
-    case 'AZW3':
-    case 'AZW':
-      return 'extract_mobi_cover_full';
-    default:
-      return null;
-  }
+  return format === 'EPUB' ? 'extract_epub_cover_full' : null;
 }

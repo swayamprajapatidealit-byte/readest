@@ -94,8 +94,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const showPagesLeft = pagesLeft > 0 && (total > 0 || !!bookData?.isFixedLayout);
   const md5 = bookData?.book?.hash;
   const medianPageDurationSecs = useMedianPageDurationSecs(md5) ?? undefined;
-  // Fixed-layout formats (CBZ, PDF) have no chapter structure — every page is
-  // its own section — so the remaining count is the whole book, not a chapter.
+  // Fixed-layout books have no chapter structure — every page is its own
+  // section — so the remaining count is the whole book, not a chapter.
   const remainingInBook = !!bookData?.isFixedLayout;
   const timeLeftStr = showPagesLeft
     ? remainingInBook

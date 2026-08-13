@@ -232,7 +232,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
             position={viewSettings.readingRulerPosition}
             opacity={viewSettings.readingRulerOpacity}
             color={viewSettings.readingRulerColor}
-            bookFormat={book.format}
+            isFixedLayout={!!bookData?.isFixedLayout}
             viewSettings={viewSettings}
             gridInsets={gridInsets}
           />
@@ -254,7 +254,6 @@ const BookCellInner: React.FC<BookCellProps> = ({
       <FootnotePopup bookKey={bookKey} bookDoc={bookDoc} />
       <FooterBar
         bookKey={bookKey}
-        bookFormat={book.format}
         section={section}
         pageinfo={pageinfo}
         isHoveredAnim={false}

@@ -7,7 +7,6 @@ import {
   BookFormat,
   BookLookupIndex,
   BookNote,
-  FIXED_LAYOUT_FORMATS,
   ImportBookOptions,
 } from '@/types/book';
 import {
@@ -28,12 +27,10 @@ import { getBaseFilename, getFilename } from '@/utils/path';
 import { BookDoc, DocumentLoader } from '@/libs/document';
 import { hasMediaOverlays } from '@/services/tts/mediaOverlay';
 import { tryNativeParseEpub } from '@/utils/tauriEpubBridge';
-import { tryNativeParseMobi } from '@/utils/tauriMobiBridge';
-import { DEFAULT_BOOK_SEARCH_CONFIG, DEFAULT_FIXED_LAYOUT_VIEW_SETTINGS } from './constants';
+import { DEFAULT_BOOK_SEARCH_CONFIG } from './constants';
 import { isContentURI, isValidURL, makeSafeFilename } from '@/utils/misc';
 import { deserializeConfig, serializeConfig, serializeRawConfig } from '@/utils/serializer';
 import { ClosableFile } from '@/utils/file';
-import { TxtToEpubConverter } from '@/utils/txt';
 import { svg2png } from '@/utils/svg';
 import { normalizeMetadataIsbn } from '@/utils/isbn';
 import { BookFileNotFoundError } from './errors';
@@ -409,10 +406,6 @@ export async function importBook(
           fileobj = file;
           filename = file.name;
         }
-        if (/\.txt$/i.test(filename)) {
-          const txt2epub = new TxtToEpubConverter();
-          ({ file: fileobj } = await txt2epub.convert({ file: fileobj }));
-        }
         if (!fileobj || fileobj.size === 0) {
           throw new Error('Invalid or empty book file');
         }
@@ -435,19 +428,12 @@ export async function importBook(
         // tests.
         let nativeBookDoc: BookDoc | undefined;
         let nativeFormat: BookFormat | undefined;
-        if (typeof file === 'string' && !/\.txt$/i.test(filename)) {
+        if (typeof file === 'string') {
           const nativeEpub = await tryNativeParseEpub(file);
           if (nativeEpub) {
             nativeBookDoc = nativeEpub.bookDoc;
             nativeFormat = 'EPUB' as BookFormat;
             nativeHash = nativeEpub.partialMd5;
-          } else {
-            const nativeMobi = await tryNativeParseMobi(file, fileobj);
-            if (nativeMobi) {
-              nativeBookDoc = nativeMobi.bookDoc;
-              nativeFormat = nativeMobi.format;
-              nativeHash = nativeMobi.partialMd5;
-            }
           }
         }
         if (nativeBookDoc && nativeFormat) {
@@ -472,14 +458,7 @@ export async function importBook(
 
     const hash = usedNativeParser ? nativeHash! : await partialMD5(fileobj!);
 
-    // PDF metadata is often generic boilerplate (e.g. every PowerPoint export
-    // is titled "PowerPoint Presentation" by the same author), so metadata
-    // alone wrongly collapses distinct files into one book (issue #5411).
-    // Salt the hash with the original filename so only same-named PDFs dedupe.
-    const metaHash = getMetadataHash(
-      loadedBook.metadata,
-      format === 'PDF' ? getBaseFilename(filename) : undefined,
-    );
+    const metaHash = getMetadataHash(loadedBook.metadata);
     let existingBook = lookupIndex
       ? lookupIndex.byHash.get(hash)
       : books.find((b) => b.hash === hash);
@@ -789,10 +768,7 @@ export async function loadBookConfig(
   book: Book,
   settings: SystemSettings,
 ): Promise<BookConfig> {
-  const globalViewSettings = {
-    ...settings.globalViewSettings,
-    ...(FIXED_LAYOUT_FORMATS.has(book.format) ? DEFAULT_FIXED_LAYOUT_VIEW_SETTINGS : {}),
-  };
+  const globalViewSettings = settings.globalViewSettings;
   try {
     let str = '{}';
     if (await fs.exists(getConfigFilename(book), 'Books')) {
@@ -812,11 +788,11 @@ export async function saveBookConfig(
 ): Promise<void> {
   let serializedConfig: string;
   if (settings) {
-    const globalViewSettings = {
-      ...settings.globalViewSettings,
-      ...(FIXED_LAYOUT_FORMATS.has(book.format) ? DEFAULT_FIXED_LAYOUT_VIEW_SETTINGS : {}),
-    };
-    serializedConfig = serializeConfig(config, globalViewSettings, DEFAULT_BOOK_SEARCH_CONFIG);
+    serializedConfig = serializeConfig(
+      config,
+      settings.globalViewSettings,
+      DEFAULT_BOOK_SEARCH_CONFIG,
+    );
   } else {
     serializedConfig = serializeRawConfig(config);
   }
@@ -840,10 +816,7 @@ export async function saveBookNav(fs: FileSystem, book: Book, nav: BookNav): Pro
   await fs.writeFile(getBookNavFilename(book), 'Books', JSON.stringify(nav));
 }
 
-export async function fetchBookDetails(
-  fs: FileSystem,
-  book: Book,
-): Promise<BookDoc['metadata']> {
+export async function fetchBookDetails(fs: FileSystem, book: Book): Promise<BookDoc['metadata']> {
   const { file } = await loadBookContent(fs, book);
   let bookDoc: BookDoc | undefined;
   try {
@@ -874,11 +847,7 @@ export async function refreshBookMetadata(fs: FileSystem, book: Book): Promise<b
     if (!bookDoc) return false;
 
     book.metadata = bookDoc.metadata;
-    // PDF metaHash is salted with the original import filename (issue #5411),
-    // which is lost after import — keep the value stamped at import time.
-    if (book.format !== 'PDF' || !book.metaHash) {
-      book.metaHash = getMetadataHash(bookDoc.metadata);
-    }
+    book.metaHash = getMetadataHash(bookDoc.metadata);
     const primaryLanguage = getPrimaryLanguage(bookDoc.metadata.language);
     if (primaryLanguage) {
       book.primaryLanguage = primaryLanguage;

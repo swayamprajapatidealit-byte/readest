@@ -275,16 +275,9 @@ export const formatBytes = (bytes?: number | null, locale = 'en-US') => {
   return formatter.format(value);
 };
 
-export const getCurrentPage = (book: Book, progress: BookProgress) => {
-  const bookFormat = book.format;
+export const getCurrentPage = (isFixedLayout: boolean, progress: BookProgress) => {
   const { section, pageinfo } = progress;
-  return bookFormat === 'PDF'
-    ? section
-      ? section.current + 1
-      : 0
-    : pageinfo
-      ? pageinfo.current + 1
-      : 0;
+  return isFixedLayout ? (section ? section.current + 1 : 0) : pageinfo ? pageinfo.current + 1 : 0;
 };
 
 /**

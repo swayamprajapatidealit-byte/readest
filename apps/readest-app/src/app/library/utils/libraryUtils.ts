@@ -187,7 +187,6 @@ export const createBookFilter = (queryTerm: string | null) => (item: Book) => {
     return (
       title.includes(lowerQuery) ||
       authors.includes(lowerQuery) ||
-      item.format.toLowerCase().includes(lowerQuery) ||
       (item.groupName && item.groupName.toLowerCase().includes(lowerQuery)) ||
       (item.metadata?.description &&
         item.metadata.description.toLowerCase().includes(lowerQuery)) ||
@@ -200,7 +199,6 @@ export const createBookFilter = (queryTerm: string | null) => (item: Book) => {
   return (
     searchTerm.test(title) ||
     searchTerm.test(authors) ||
-    searchTerm.test(item.format) ||
     (item.groupName && searchTerm.test(item.groupName)) ||
     (item.metadata?.description && searchTerm.test(item.metadata?.description)) ||
     searchTerm.test(getBookValuesText(item)) ||
@@ -297,8 +295,6 @@ const compareBookByKey = (a: Book, b: Book, sortBy: string, uiLanguage: string):
       return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
     case LibrarySortByType.Created:
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    case LibrarySortByType.Format:
-      return a.format.localeCompare(b.format, uiLanguage || navigator.language);
     case LibrarySortByType.Progress:
       return getBookReadRatio(a) - getBookReadRatio(b);
     case LibrarySortByType.Series: {
@@ -676,9 +672,6 @@ export const getBookSortValue = (book: Book, sortBy: LibrarySortByType): number 
     case LibrarySortByType.Created:
       return book.createdAt;
 
-    case LibrarySortByType.Format:
-      return book.format;
-
     case LibrarySortByType.Progress:
       return getBookReadRatio(book);
 
@@ -711,8 +704,7 @@ export const getGroupSortValue = (
   if (books.length === 0) {
     return sortBy === LibrarySortByType.Title ||
       sortBy === LibrarySortByType.Series ||
-      sortBy === LibrarySortByType.Author ||
-      sortBy === LibrarySortByType.Format
+      sortBy === LibrarySortByType.Author
       ? group.name
       : 0;
   }
@@ -720,7 +712,6 @@ export const getGroupSortValue = (
   switch (sortBy) {
     case LibrarySortByType.Title:
     case LibrarySortByType.Series:
-    case LibrarySortByType.Format:
       return group.name;
 
     case LibrarySortByType.Author: {

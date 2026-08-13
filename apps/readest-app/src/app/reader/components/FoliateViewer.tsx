@@ -29,7 +29,6 @@ import {
   applyScrollModeClass,
   applyThemeModeClass,
   getStyles,
-  getThemeCode,
   keepTextAlignment,
   transformStylesheet,
 } from '@/utils/style';
@@ -97,7 +96,7 @@ const FoliateViewer: React.FC<{
   const _ = useTranslation();
   const searchParams = useSearchParams();
   const { appService, envConfig } = useEnv();
-  const { themeCode, isDarkMode } = useThemeStore();
+  const { isDarkMode } = useThemeStore();
   const { settings } = useSettingsStore();
   const { loadFont, loadCustomFonts, getLoadedFonts, getAvailableFonts } = useCustomFontStore();
   // Per-field selectors — see store/readerProgressStore.ts header for the
@@ -114,7 +113,6 @@ const FoliateViewer: React.FC<{
   const getParallels = useParallelViewStore((s) => s.getParallels);
   const getBookData = useBookDataStore((s) => s.getBookData);
   const { applyBackgroundTexture } = useBackgroundTexture();
-  const bookData = getBookData(bookKey);
   const viewState = getViewState(bookKey);
   const viewSettings = getViewSettings(bookKey);
 
@@ -338,15 +336,6 @@ const FoliateViewer: React.FC<{
 
       if (bookDoc.rendition?.layout === 'pre-paginated') {
         applyFixedlayoutStyles(detail.doc, viewSettings);
-        const themeCode = getThemeCode();
-        if (bookData.book?.format === 'PDF' && themeCode && renderer) {
-          renderer.pageColors = viewSettings.applyThemeToPDF
-            ? {
-                background: themeCode.bg,
-                foreground: themeCode.fg,
-              }
-            : undefined;
-        }
       }
 
       applyImageStyle(detail.doc);
@@ -837,7 +826,6 @@ const FoliateViewer: React.FC<{
 
   useEffect(() => {
     if (viewRef.current && viewRef.current.renderer) {
-      const renderer = viewRef.current.renderer;
       const viewSettings = getViewSettings(bookKey)!;
       viewRef.current.renderer.setStyles?.(getStyles(viewSettings, undefined, getLoadedFonts()));
       const docs = viewRef.current.renderer.getContents();
@@ -849,24 +837,13 @@ const FoliateViewer: React.FC<{
         applyScrollModeClass(doc, viewSettings.scrolled || false);
         applyScrollbarStyle(document, viewSettings.hideScrollbar || false);
       });
-
-      if (bookData?.book?.format === 'PDF' && themeCode && renderer) {
-        renderer.pageColors = viewSettings.applyThemeToPDF
-          ? {
-              background: themeCode.bg,
-              foreground: themeCode.fg,
-            }
-          : undefined;
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    themeCode,
     isDarkMode,
     viewSettings?.scrolled,
     viewSettings?.overrideColor,
     viewSettings?.invertImgColorInDark,
-    viewSettings?.applyThemeToPDF,
     viewSettings?.contrast,
     viewSettings?.hideScrollbar,
   ]);

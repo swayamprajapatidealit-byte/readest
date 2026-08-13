@@ -13,7 +13,6 @@ export const LibrarySortByType = {
   Created: 'created',
   Series: 'series',
   Size: 'size',
-  Format: 'format',
   Published: 'published',
   Progress: 'progress',
   TimeRemaining: 'timeRemaining',

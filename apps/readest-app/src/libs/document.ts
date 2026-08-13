@@ -17,7 +17,7 @@ export interface TOCItem {
   id: number;
   label: string;
   href: string;
-  index: number; // Page index for PDF books
+  index: number; // Spine/page index
   cfi?: string;
   location?: Location;
   subitems?: TOCItem[];
@@ -128,28 +128,10 @@ export interface BookDoc {
 
 export const EXTS: Record<BookFormat, string> = {
   EPUB: 'epub',
-  PDF: 'pdf',
-  MOBI: 'mobi',
-  AZW: 'azw',
-  AZW3: 'azw3',
-  CBZ: 'cbz',
-  FB2: 'fb2',
-  FBZ: 'fbz',
-  TXT: 'txt',
-  MD: 'md',
 };
 
 export const MIMETYPES: Record<BookFormat, string[]> = {
   EPUB: ['application/epub+zip'],
-  PDF: ['application/pdf'],
-  MOBI: ['application/x-mobipocket-ebook'],
-  AZW: ['application/vnd.amazon.ebook'],
-  AZW3: ['application/vnd.amazon.mobi8-ebook', 'application/x-mobi8-ebook'],
-  CBZ: ['application/vnd.comicbook+zip', 'application/zip', 'application/x-cbz'],
-  FB2: ['application/x-fictionbook+xml', 'text/xml', 'application/xml'],
-  FBZ: ['application/x-zip-compressed-fb2', 'application/zip'],
-  TXT: ['text/plain'],
-  MD: ['text/markdown', 'text/x-markdown'],
 };
 
 export interface DocumentLoaderOptions {
@@ -212,13 +194,6 @@ export class DocumentLoader {
       }
     }
     return false;
-  }
-
-  private async isPDF(): Promise<boolean> {
-    const arr = new Uint8Array(await this.file.slice(0, 5).arrayBuffer());
-    return (
-      arr[0] === 0x25 && arr[1] === 0x50 && arr[2] === 0x44 && arr[3] === 0x46 && arr[4] === 0x2d
-    );
   }
 
   private async makeZipLoader(prefetch?: {
@@ -341,79 +316,17 @@ export class DocumentLoader {
     return { entries, loadText, loadBlob, getSize, getComment, sha1: undefined };
   }
 
-  private isCBZ(): boolean {
-    return (
-      this.file.type === 'application/vnd.comicbook+zip' || this.file.name.endsWith(`.${EXTS.CBZ}`)
-    );
-  }
-
-  private isFB2(): boolean {
-    return (
-      this.file.type === 'application/x-fictionbook+xml' || this.file.name.endsWith(`.${EXTS.FB2}`)
-    );
-  }
-
-  private isFBZ(): boolean {
-    return (
-      this.file.type === 'application/x-zip-compressed-fb2' ||
-      this.file.name.endsWith('.fb.zip') ||
-      this.file.name.endsWith('.fb2.zip') ||
-      this.file.name.endsWith(`.${EXTS.FBZ}`)
-    );
-  }
-
-  private isTxt(): boolean {
-    // Tolerate MIME params (text/plain;charset=utf-8), uppercase extensions
-    // (BOOK.TXT), and a nameless Blob — otherwise a TXT can slip onto the
-    // non-text path and yield a null book.
-    return (
-      this.file.type.startsWith('text/plain') ||
-      (this.file.name?.toLowerCase().endsWith(`.${EXTS.TXT}`) ?? false)
-    );
-  }
-
-  private isMd(): boolean {
-    const name = this.file.name?.toLowerCase() ?? '';
-    return (
-      this.file.type === 'text/markdown' ||
-      this.file.type === 'text/x-markdown' ||
-      name.endsWith(`.${EXTS.MD}`) ||
-      name.endsWith('.markdown')
-    );
-  }
-
   public async open(): Promise<{ book: BookDoc; format: BookFormat }> {
     let book = null;
-    let format: BookFormat = 'EPUB';
+    const format: BookFormat = 'EPUB';
     if (!this.file.size) {
       throw new Error('File is empty');
     }
     try {
-      // A raw .txt has no binary book format, so the checks below all miss and
-      // `book` stays null. Convert it to EPUB in-memory first (the same
-      // conversion the import path runs) and parse that. The managed library
-      // stores the already-converted EPUB, but the Android "Open with" transient
-      // path points the book at the original .txt, so it reaches us unconverted.
-      // Markdown is rendered to HTML at runtime (no EPUB conversion). Check
-      // this BEFORE isTxt() — a .md served as text/plain would otherwise be
-      // grabbed by the TXT->EPUB path above.
-      if (this.isMd()) {
-        const { makeMarkdownBook } = await import('@/utils/md');
-        return { book: await makeMarkdownBook(this.file), format: 'MD' };
-      }
-      if (this.isTxt()) {
-        const { TxtToEpubConverter } = await import('@/utils/txt');
-        const { file: epubFile } = await new TxtToEpubConverter().convert({ file: this.file });
-        return await new DocumentLoader(epubFile).open();
-      }
       if (await this.isZip()) {
-        // EPUB-only fast path: ask Rust to pre-read OPF/nav/ncx + sizes.
-        // CBZ/FBZ skip this -- they have no OPF and Rust has no parser
-        // for them. We probe `isEPUBLike()` (= isZip but not CBZ/FBZ)
-        // so the prefetch RPC only fires when it can actually be used.
-        const isEPUBLike = !this.isCBZ() && !this.isFBZ();
+        // Ask Rust to pre-read OPF/nav/ncx + sizes ahead of the zip.js parse.
         let prefetch: { textCache: Map<string, string>; sizes: Map<string, number> } | undefined;
-        if (isEPUBLike && this.nativeFilePath) {
+        if (this.nativeFilePath) {
           const { tryNativePrefetchEpub } = await import('@/utils/tauriEpubBridge');
           const native = await tryNativePrefetchEpub(this.nativeFilePath);
           if (native) {
@@ -421,46 +334,8 @@ export class DocumentLoader {
           }
         }
         const loader = await this.makeZipLoader(prefetch);
-        const { entries } = loader;
-
-        if (this.isCBZ()) {
-          const { makeComicBook } = await import('foliate-js/comic-book.js');
-          book = await makeComicBook(loader, this.file);
-          format = 'CBZ';
-        } else if (this.isFBZ()) {
-          const entry = entries.find((entry) => entry.filename.endsWith(`.${EXTS.FB2}`));
-          const blob = await loader.loadBlob((entry ?? entries[0]!).filename);
-          const { makeFB2 } = await import('foliate-js/fb2.js');
-          book = await makeFB2(blob);
-          format = 'FBZ';
-        } else {
-          const { EPUB } = await import('foliate-js/epub.js');
-          book = await new EPUB(loader).init();
-          format = 'EPUB';
-        }
-      } else if (await this.isPDF()) {
-        const { makePDF } = await import('foliate-js/pdf.js');
-        book = await makePDF(this.file);
-        format = 'PDF';
-      } else if (await (await import('foliate-js/mobi.js')).isMOBI(this.file)) {
-        const fflate = await import('foliate-js/vendor/fflate.js');
-        const { MOBI } = await import('foliate-js/mobi.js');
-        book = await new MOBI({ unzlib: fflate.unzlibSync }).open(this.file);
-        const ext = this.file.name.split('.').pop()?.toLowerCase();
-        switch (ext) {
-          case 'azw':
-            format = 'AZW';
-            break;
-          case 'azw3':
-            format = 'AZW3';
-            break;
-          default:
-            format = 'MOBI';
-        }
-      } else if (this.isFB2()) {
-        const { makeFB2 } = await import('foliate-js/fb2.js');
-        book = await makeFB2(this.file);
-        format = 'FB2';
+        const { EPUB } = await import('foliate-js/epub.js');
+        book = await new EPUB(loader).init();
       }
     } catch (e: unknown) {
       console.error('Failed to open document:', e);
@@ -469,7 +344,7 @@ export class DocumentLoader {
       }
       throw e;
     }
-    return { book, format } as { book: BookDoc; format: BookFormat };
+    return { book, format } as unknown as { book: BookDoc; format: BookFormat };
   }
 }
 

@@ -38,18 +38,7 @@ export const LOCAL_DICTIONARIES_SUBDIR = `${DATA_SUBDIR}/Dictionaries`;
 
 export const SETTINGS_FILENAME = 'settings.json';
 
-export const SUPPORTED_BOOK_EXTS = [
-  'epub',
-  'mobi',
-  'azw',
-  'azw3',
-  'fb2',
-  'zip',
-  'cbz',
-  'pdf',
-  'txt',
-  'md',
-];
+export const SUPPORTED_BOOK_EXTS = ['epub'];
 export const BOOK_ACCEPT_FORMATS = SUPPORTED_BOOK_EXTS.map((ext) => `.${ext}`).join(', ');
 export const BOOK_UNGROUPED_NAME = '';
 export const BOOK_UNGROUPED_ID = '';
@@ -232,7 +221,6 @@ export const DEFAULT_BOOK_STYLE: BookStyle = {
   spreadMode: 'auto',
   keepCoverSpread: true,
   invertImgColorInDark: false,
-  applyThemeToPDF: false,
   contrast: 100,
 };
 
@@ -249,10 +237,6 @@ export const DEFAULT_CJK_VIEW_SETTINGS: Partial<ViewSettings> = {
   textIndent: 2,
   paragraphMargin: 1,
   lineHeight: 1.6,
-};
-
-export const DEFAULT_FIXED_LAYOUT_VIEW_SETTINGS: Partial<ViewSettings> = {
-  overrideColor: false,
 };
 
 export const DEFAULT_EINK_VIEW_SETTINGS: Partial<ViewSettings> = {

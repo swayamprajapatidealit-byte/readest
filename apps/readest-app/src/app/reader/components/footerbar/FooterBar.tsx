@@ -5,7 +5,6 @@ import { useSpatialNavigation } from '@/app/reader/hooks/useSpatialNavigation';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useBookDataStore } from '@/store/bookDataStore';
-import { FIXED_LAYOUT_FORMATS } from '@/types/book';
 import { useTranslation } from '@/hooks/useTranslation';
 import { eventDispatcher } from '@/utils/event';
 import type { FooterBarProps, NavigationHandlers, FooterBarChildProps } from './types';
@@ -18,7 +17,6 @@ import TTSControl from '../tts/TTSControl';
 
 const FooterBar: React.FC<FooterBarProps> = ({
   bookKey,
-  bookFormat,
   section,
   pageinfo,
   isHoveredAnim,
@@ -45,8 +43,8 @@ const FooterBar: React.FC<FooterBarProps> = ({
   const pointerInDoc = docs.some(({ doc }) => doc?.body?.style.cursor === 'pointer');
 
   const progressInfo = useMemo(
-    () => (FIXED_LAYOUT_FORMATS.has(bookFormat) ? section : pageinfo),
-    [bookFormat, section, pageinfo],
+    () => (bookData?.isFixedLayout ? section : pageinfo),
+    [bookData?.isFixedLayout, section, pageinfo],
   );
 
   const progressValid = !!progressInfo && progressInfo.total > 0 && progressInfo.current >= 0;

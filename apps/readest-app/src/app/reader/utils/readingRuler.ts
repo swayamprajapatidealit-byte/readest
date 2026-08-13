@@ -1,4 +1,4 @@
-import { BookFormat, FIXED_LAYOUT_FORMATS, ViewSettings } from '@/types/book';
+import { ViewSettings } from '@/types/book';
 
 export const FIXED_LAYOUT_READING_RULER_LINE_HEIGHT = 28;
 
@@ -170,9 +170,9 @@ export const buildReadingRulerColumns = (
 export const calculateReadingRulerSize = (
   lines: number,
   viewSettings: ReadingRulerSettings,
-  bookFormat: BookFormat,
+  isFixedLayout: boolean,
 ): number => {
-  if (FIXED_LAYOUT_FORMATS.has(bookFormat)) {
+  if (isFixedLayout) {
     return lines * FIXED_LAYOUT_READING_RULER_LINE_HEIGHT;
   }
 
@@ -190,9 +190,9 @@ const READING_RULER_PADDING_FACTOR = 0.3;
  */
 export const calculateReadingRulerPadding = (
   viewSettings: ReadingRulerSettings,
-  bookFormat: BookFormat,
+  isFixedLayout: boolean,
 ): number => {
-  if (FIXED_LAYOUT_FORMATS.has(bookFormat)) {
+  if (isFixedLayout) {
     return Math.round(FIXED_LAYOUT_READING_RULER_LINE_HEIGHT * READING_RULER_PADDING_FACTOR);
   }
   const fontSize = viewSettings.defaultFontSize || 16;
