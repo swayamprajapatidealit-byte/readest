@@ -127,7 +127,9 @@
       "Bash(rm -f packages/foliate-js/.git packages/simplecc-wasm/.git packages/js-mdict/.git)",
       "Bash(rm -f .gitmodules)",
       "Bash(rm -rf .github)",
-      "Bash(rm -f packages/simplecc-wasm/OpenCC/.git packages/simplecc-wasm/.gitmodules *)"
+      "Bash(rm -f packages/simplecc-wasm/OpenCC/.git packages/simplecc-wasm/.gitmodules *)",
+      "Bash(git branch *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC"
