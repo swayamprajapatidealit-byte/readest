@@ -11,6 +11,8 @@ COPY packages/ ./packages/
 RUN --mount=type=cache,id=pnpm,sharing=locked,target=/pnpm/store pnpm install --frozen-lockfile
 RUN test -d packages/simplecc-wasm/dist/web \
     || { printf '\nERROR: Required git submodule is not initialized in the source directory.\nEnsure the submodule is initialized before running docker build.\nRun: git submodule update --init packages/simplecc-wasm\n\n'; exit 1; }
+RUN test -f packages/js-mdict/src/index.ts \
+    || { printf '\nERROR: Required git submodule is not initialized in the source directory.\nEnsure the submodule is initialized before running docker build.\nRun: git submodule update --init packages/js-mdict\n\n'; exit 1; }
 RUN pnpm --filter @readest/readest-app setup-vendors
 
 FROM docker.io/library/node:24-slim@sha256:24dc26ef1e3c3690f27ebc4136c9c186c3133b25563ae4d7f0692e4d1fe5db0e AS development-stage

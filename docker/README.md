@@ -57,9 +57,9 @@ published tags:
 
 ### Build locally instead of pulling
 
-> **Prerequisites for local builds**: the `packages/foliate-js` and `packages/simplecc-wasm` git submodules must be initialized before building:
+> **Prerequisites for local builds**: the `packages/js-mdict` and `packages/simplecc-wasm` git submodules must be initialized before building:
 > ```bash
-> git submodule update --init packages/foliate-js packages/simplecc-wasm
+> git submodule update --init packages/js-mdict packages/simplecc-wasm
 > ```
 > In GitHub Codespaces this is done automatically via `.devcontainer/devcontainer.json`.
 
