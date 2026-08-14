@@ -317,7 +317,6 @@ export interface ViewConfig {
 
 export interface TTSConfig {
   ttsRate: number;
-  ttsSentenceGap: number;
   ttsParagraphGap: number;
   ttsVoice: string;
   // Prefer the book's own recorded narration (EPUB 3 Media Overlays) over

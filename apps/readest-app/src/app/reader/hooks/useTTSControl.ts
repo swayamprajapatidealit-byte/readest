@@ -14,7 +14,6 @@ import {
   TTSHighlightOptions,
   TTSVoicesGroup,
 } from '@/services/tts';
-import { DEFAULT_SENTENCE_GAP_SEC } from '@/services/tts/EdgeTTSClient';
 import { DEFAULT_PARAGRAPH_GAP_SEC } from '@/services/tts/TTSController';
 import { eventDispatcher } from '@/utils/event';
 import { genSSMLRaw, parseSSMLLang } from '@/utils/ssml';
@@ -896,7 +895,6 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
 
           ttsController.setLang(lang);
           ttsController.setRate(viewSettings.ttsRate);
-          ttsController.setSentenceGap(viewSettings.ttsSentenceGap ?? DEFAULT_SENTENCE_GAP_SEC);
           ttsController.setParagraphGap(viewSettings.ttsParagraphGap ?? DEFAULT_PARAGRAPH_GAP_SEC);
           // Narrating a selection is an ordinary session started at that point,
           // so it must not be treated as a one-shot utterance that stops the
@@ -970,13 +968,6 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
   const handleSupportsPlaybackInfo = useCallback(() => {
     return ttsControllerRef.current?.supportsPlaybackInfo() ?? false;
   }, []);
-
-  // Stable handle for the download/chapters surface (reads the cache and
-  // drives headless pre-synthesis off the playback path). MUST be memoized:
-  // an inline arrow here changes identity every render, which would cascade
-  // through useTTSDownloads' refresh callback into its effect and spin an
-  // infinite render loop the moment the sheet opens.
-  const getController = useCallback(() => ttsControllerRef.current, []);
 
   // Playback callbacks
   const handleTogglePlay = useCallback(async () => {
@@ -1058,14 +1049,8 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
     [],
   );
 
-  // Inter-sentence gap: read live at schedule time by the controller, so
-  // changing it must not stop/restart playback like handleSetRate does.
-  const handleSetSentenceGap = useCallback((sec: number) => {
-    ttsControllerRef.current?.setSentenceGap(sec);
-  }, []);
-
-  // Paragraph gap: applies to every TTS client (not Edge-only), read live by
-  // the controller when auto-advancing, so no stop/restart here either.
+  // Paragraph gap: applies to every TTS client, read live by the controller
+  // when auto-advancing, so changing it must not stop/restart playback.
   const handleSetParagraphGap = useCallback((sec: number) => {
     ttsControllerRef.current?.setParagraphGap(sec);
   }, []);
@@ -1146,7 +1131,6 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
     handleForward,
     handlePause,
     handleSetRate,
-    handleSetSentenceGap,
     handleSetParagraphGap,
     handleSetVoice,
     handleGetVoices,
@@ -1158,6 +1142,5 @@ export const useTTSControl = ({ bookKey, onRequestHidePanel }: UseTTSControlProp
     handleGetPlaybackInfo,
     handleSupportsPlaybackInfo,
     refreshTtsLang,
-    getController,
   };
 };

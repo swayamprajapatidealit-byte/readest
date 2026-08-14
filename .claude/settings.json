@@ -163,10 +163,32 @@
       "Read(//home/ideal38/ideal-it/src/**)",
       "Bash(git log *)",
       "Bash(bash .husky/pre-push)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "WebFetch(domain:claude.ai)",
+      "Bash(git config *)",
+      "Bash(mkdir -p src/services/visualible)",
+      "Bash(cd /home/ideal38/ideal-it/readest/apps/readest-app && grep -rn \"api/books\\\\|BooksDirEntry\\\\|BOOKS_DIR\" src docker 2>/dev/null; grep -rn \"?book=\" src docker README.md ../../README.md 2>/dev/null)",
+      "Bash(pnpm dev-web *)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/ -o /tmp/claude-1000/-home-ideal38-ideal-it-readest/315e0ae2-e073-47b3-9409-2741afe3d2ea/scratchpad/home.html -w \"%{http_code}\\\\n\")",
+      "Bash(timeout 25 google-chrome --headless=new --disable-gpu --no-sandbox --virtual-time-budget=4000 --dump-dom http://localhost:3000/)",
+      "Bash(pkill -f \"google-chrome.*headless\")",
+      "Bash(google-chrome --headless=new --disable-gpu --no-sandbox --remote-debugging-port=9222 --remote-debugging-address=127.0.0.1 about:blank)",
+      "Bash(curl -s http://127.0.0.1:9222/json/version)",
+      "Bash(node cdp.mjs \"http://localhost:3000/reader/nonexistent-hash\" 4000)",
+      "Bash(node cdp.mjs \"http://localhost:3000/reader/nonexistent-hash\" 600)",
+      "Bash(node cdp.mjs \"http://localhost:3000/?slug=test-nonexistent-slug&token=faketoken\" 3000)",
+      "Bash(node cdp-net.mjs \"http://localhost:3000/?slug=test-nonexistent-slug&token=faketoken123\" 3000)",
+      "Bash(kill 70985)",
+      "Bash(xargs -I{} sh -c 'echo ===={}====; head -15 {}')",
+      "Bash(xargs -I{} head -5 {})",
+      "Bash(grep -rn \"fetch\\(['\\\\\"\\\\`]/api\\\\|fetch\\(\\\\`/api\\\\|axios.*['\\\\\"]/api\" src --include=\"*.ts\" --include=\"*.tsx\")",
+      "Read(//home/ideal38/ideal-it/readest/apps/readest-app/docker/**)",
+      "Bash(sort -u -t: -k2)"
     ],
     "additionalDirectories": [
-      "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC"
+      "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC",
+      "/home/ideal38/ideal-it/readest/apps/readest-app/src/services"
     ]
   }
 }

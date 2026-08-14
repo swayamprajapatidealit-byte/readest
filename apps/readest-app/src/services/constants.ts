@@ -25,7 +25,6 @@ import {
 import { getDefaultMaxBlockSize, getDefaultMaxInlineSize } from '@/utils/config';
 import { stubTranslation as _ } from '@/utils/misc';
 import { DEFAULT_ANNOTATION_TOOLBAR_ITEMS } from '@/utils/annotationToolbar';
-import { DEFAULT_SENTENCE_GAP_SEC } from './tts/EdgeTTSClient';
 import { DEFAULT_PARAGRAPH_GAP_SEC } from './tts/TTSController';
 
 export const DATA_SUBDIR = 'Readest';
@@ -285,7 +284,6 @@ export const DEFAULT_VIEW_CONFIG: ViewConfig = {
 
 export const DEFAULT_TTS_CONFIG: TTSConfig = {
   ttsRate: 1.3,
-  ttsSentenceGap: DEFAULT_SENTENCE_GAP_SEC,
   ttsParagraphGap: DEFAULT_PARAGRAPH_GAP_SEC,
   ttsVoice: '',
   ttsUseNarration: true,
@@ -708,6 +706,10 @@ export const DOWNLOAD_READEST_URL = 'https://readest.com?utm_source=readest_web'
 
 export const READEST_WEB_BASE_URL = 'https://web.readest.com';
 export const READEST_NODE_BASE_URL = 'https://node.readest.com';
+
+export const VISUALIBLE_MARKETPLACE_HOST = 'https://api.visualible.com/ebook-v1/';
+export const VISUALIBLE_AWS_HOST = 'https://api.visualible.com/aws-v1/';
+export const VISUALIBLE_FILE_HOST = 'https://content.visualible.com/';
 
 const LATEST_DOWNLOAD_BASE_URL = 'https://download.readest.com/releases';
 

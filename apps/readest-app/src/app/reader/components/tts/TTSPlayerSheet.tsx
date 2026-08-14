@@ -10,13 +10,10 @@ import {
   MdKeyboardDoubleArrowRight,
   MdOutlinePause,
   MdPlayArrow,
-  MdOutlineFileDownload,
-  MdChevronRight,
 } from 'react-icons/md';
 import { RiVoiceAiFill } from 'react-icons/ri';
 import { TTSVoicesGroup } from '@/services/tts';
 import { MEDIA_OVERLAY_VOICE_ID } from '@/services/tts/mediaOverlay';
-import { DEFAULT_SENTENCE_GAP_SEC } from '@/services/tts/EdgeTTSClient';
 import { DEFAULT_PARAGRAPH_GAP_SEC } from '@/services/tts/TTSController';
 import { useEnv } from '@/context/EnvContext';
 import { useReaderStore } from '@/store/readerStore';
@@ -32,11 +29,9 @@ import { TTSPlaybackInfo } from './usePlaybackInfo';
 import { useCountdownLabel } from './useCountdownLabel';
 import TTSScrubber from './TTSScrubber';
 import SpeedRuler, { formatRate } from './SpeedRuler';
-import TTSChaptersView from './TTSChaptersView';
 import { TTS_STOP_AT_CHAPTER_END } from '@/services/tts/TTSSessionManager';
-import type { UseTTSDownloadsResult } from '@/app/reader/hooks/useTTSDownloads';
 
-type SheetView = 'main' | 'speed' | 'voice' | 'timer' | 'chapters';
+type SheetView = 'main' | 'speed' | 'voice' | 'timer';
 
 export const formatGap = (sec: number) => `${parseFloat(sec.toFixed(2))}s`;
 
@@ -74,7 +69,6 @@ type TTSPlayerSheetProps = {
   onBackward: (byMark: boolean) => void;
   onForward: (byMark: boolean) => void;
   onSetRate: (rate: number) => void;
-  onSetSentenceGap: (sec: number) => void;
   onSetParagraphGap: (sec: number) => void;
   onGetVoices: (lang: string) => Promise<TTSVoicesGroup[]>;
   onSetVoice: (voice: string, lang: string) => void;
@@ -83,8 +77,6 @@ type TTSPlayerSheetProps = {
   onSeek: (seconds: number) => Promise<void>;
   onSeekPreview: (seconds: number) => void;
   onGetPlaybackInfo: () => TTSPlaybackInfo | null;
-  downloads: UseTTSDownloadsResult;
-  activeSectionIndex: number | null;
 };
 
 // Full player sheet: cover, chapter, scrubber, transport, and one compact
@@ -104,7 +96,6 @@ const TTSPlayerSheet = ({
   onBackward,
   onForward,
   onSetRate,
-  onSetSentenceGap,
   onSetParagraphGap,
   onGetVoices,
   onSetVoice,
@@ -113,8 +104,6 @@ const TTSPlayerSheet = ({
   onSeek,
   onSeekPreview,
   onGetPlaybackInfo,
-  downloads,
-  activeSectionIndex,
 }: TTSPlayerSheetProps) => {
   const _ = useTranslation();
   const { envConfig } = useEnv();
@@ -142,12 +131,9 @@ const TTSPlayerSheet = ({
   const sectionLabel = progress?.sectionLabel;
   const isEink = viewSettings?.isEink ?? false;
 
-  // Books with recorded narration expose it as a voice; while it is playing
-  // there is nothing to pre-download, since the audio ships with the book.
   const hasNarrationVoice = voiceGroups.some((group) =>
     group.voices.some((voice) => voice.id === MEDIA_OVERLAY_VOICE_ID),
   );
-  const isNarrating = selectedVoice === MEDIA_OVERLAY_VOICE_ID;
 
   // Fresh open: land on the main view with current rate/voice.
   useEffect(() => {
@@ -192,21 +178,17 @@ const TTSPlayerSheet = ({
     setRate(value);
     onSetRate(value);
 
-    const gap = scaleGap(DEFAULT_SENTENCE_GAP_SEC, value);
     const paragraphGap = scaleGap(DEFAULT_PARAGRAPH_GAP_SEC, value);
-    onSetSentenceGap(gap);
     onSetParagraphGap(paragraphGap);
 
     const vs = getViewSettings(bookKey)!;
     vs.ttsRate = value;
-    vs.ttsSentenceGap = gap;
     vs.ttsParagraphGap = paragraphGap;
     setViewSettings(bookKey, vs);
     // Read the store fresh at call time: a `settings` captured at render goes
     // stale if anything else persisted settings since this sheet mounted.
     const { settings, setSettings, saveSettings } = useSettingsStore.getState();
     settings.globalViewSettings.ttsRate = value;
-    settings.globalViewSettings.ttsSentenceGap = gap;
     settings.globalViewSettings.ttsParagraphGap = paragraphGap;
     setSettings(settings);
     saveSettings(envConfig, settings);
@@ -230,10 +212,6 @@ const TTSPlayerSheet = ({
   const handleSelectTimeout = (value: number) => {
     onSelectTimeout(bookKey, value);
     setView('main');
-  };
-
-  const handleOpenDownloads = () => {
-    setView('chapters');
   };
 
   const timeoutOptions = getTTSTimeoutOptions(_);
@@ -286,9 +264,7 @@ const TTSPlayerSheet = ({
               ? _('Speed')
               : view === 'voice'
                 ? _('Select Voice')
-                : view === 'chapters'
-                  ? _('Offline Audio')
-                  : _('Set Timeout')}
+                : _('Set Timeout')}
           </span>
         </div>
       </div>
@@ -421,35 +397,7 @@ const TTSPlayerSheet = ({
               </span>
             </button>
           </div>
-          {!isNarrating && downloads.supported && downloads.chapters.length > 0 && (
-            <button
-              type='button'
-              aria-label={_('Offline Audio')}
-              onClick={handleOpenDownloads}
-              className='not-eink:bg-base-200 eink-bordered flex w-full items-center gap-3 rounded-xl px-3 py-2.5'
-            >
-              <MdOutlineFileDownload size={iconSize24} className='shrink-0' />
-              <div className='flex min-w-0 flex-1 flex-col items-start'>
-                <span className='text-sm font-semibold'>{_('Offline Audio')}</span>
-                <span className='text-base-content/60 line-clamp-1 text-start text-xs'>
-                  {_('{{done}} of {{total}} downloaded', {
-                    done: downloads.chapters.filter((c) => downloads.statusOf(c) === 'complete')
-                      .length,
-                    total: downloads.chapters.length,
-                  })}
-                </span>
-              </div>
-              <MdChevronRight size={iconSize24} className='shrink-0 rtl:rotate-180' />
-            </button>
-          )}
         </div>
-      )}
-      {view === 'chapters' && (
-        <TTSChaptersView
-          downloads={downloads}
-          activeSectionIndex={activeSectionIndex}
-          isEink={isEink}
-        />
       )}
       {view === 'speed' && (
         <div className='flex w-full flex-col items-center pb-4 pt-2'>

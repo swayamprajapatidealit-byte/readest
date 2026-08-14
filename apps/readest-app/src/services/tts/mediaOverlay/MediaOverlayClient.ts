@@ -485,7 +485,6 @@ export class MediaOverlayClient implements TTSClient {
       // highlight; interpolating within a clip would only invent drift.
       wordBoundaries: false,
       mediaClock: true,
-      gapControl: false,
       liveRateChange: true,
       continuousTimeline: true,
     };

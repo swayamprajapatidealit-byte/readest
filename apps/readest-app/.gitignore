@@ -93,8 +93,3 @@ docs/superpowers
 # Word Lens build-input corpora (ECDICT, WikDict, FrequencyWords, etc.) — large,
 # downloaded on demand by scripts/build-wordlens-data.mjs; cached locally, not committed.
 /data/wordlens/.sources/
-
-# User's own epub drop folder for the URL-param reading flow — personal
-# content, never committed.
-/data/books/*
-!/data/books/.gitkeep

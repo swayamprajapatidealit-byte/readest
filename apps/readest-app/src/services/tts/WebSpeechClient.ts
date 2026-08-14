@@ -289,7 +289,7 @@ export class WebSpeechClient implements TTSClient {
   getCapabilities(): TTSCapabilities {
     // Direct-speak engine: the OS renders the audio, so there is no media
     // clock, no word boundaries, and no gap or live-rate control.
-    return { wordBoundaries: false, mediaClock: false, gapControl: false, liveRateChange: false };
+    return { wordBoundaries: false, mediaClock: false, liveRateChange: false };
   }
 
   getGranularities(): TTSGranularity[] {

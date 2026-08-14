@@ -8,7 +8,3 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      BOOKS_DIR: /app/apps/readest-app/data/books
-    volumes:
-      - ../apps/readest-app/data/books:/app/apps/readest-app/data/books

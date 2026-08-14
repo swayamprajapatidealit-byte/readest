@@ -24,10 +24,10 @@ cp docker/.env.example docker/.env
 
 update `docker/.env` if you want a different image or a self-hosted CJK font mirror.
 
-### 2. Add your books
+### 2. Open a book
 
-Drop `.epub` files into `apps/readest-app/data/books/` — the compose file bind-mounts
-this directory into the container. Open a book at `http://localhost:3000/?book=<filename>.epub`.
+Books are served from the Visualible API, not a local folder. Open one at
+`http://localhost:3000/?slug=<book-slug>&token=<jwt>`.
 
 ### 3. Start the Stack (pull prebuilt client image)
 
@@ -128,8 +128,5 @@ docker build \
 run the built image:
 
 ```bash
-docker run -p 3000:3000 \
-  -e BOOKS_DIR=/app/apps/readest-app/data/books \
-  -v $(pwd)/apps/readest-app/data/books:/app/apps/readest-app/data/books \
-  readest-client
+docker run -p 3000:3000 readest-client
 ```

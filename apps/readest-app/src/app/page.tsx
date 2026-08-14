@@ -6,45 +6,9 @@ import { useEnv } from '@/context/EnvContext';
 import { useLibrary } from '@/hooks/useLibrary';
 import { useLibraryStore } from '@/store/libraryStore';
 import { navigateToReader } from '@/utils/nav';
-import type { BooksDirEntry } from './api/books/route';
-
-const buildFileUrl = (name: string) =>
-  new URL(`/api/books/${encodeURIComponent(name)}`, window.location.origin).toString();
-
-function BooksList() {
-  const [books, setBooks] = useState<BooksDirEntry[] | null>(null);
-
-  useEffect(() => {
-    fetch('/api/books')
-      .then((res) => res.json())
-      .then((data: { books: BooksDirEntry[] }) => setBooks(data.books))
-      .catch(() => setBooks([]));
-  }, []);
-
-  return (
-    <div className='flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center'>
-      <h1 className='text-xl font-semibold'>Readest</h1>
-      <p className='text-base-content/70'>
-        Open a book with <code>?book=filename.epub</code>
-      </p>
-      {books?.length ? (
-        <ul className='flex flex-col gap-2'>
-          {books.map((book) => (
-            <li key={book.name}>
-              <a className='link' href={`/?book=${encodeURIComponent(book.name)}`}>
-                {book.name}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        books !== null && (
-          <p className='text-base-content/50'>No books found in the data directory.</p>
-        )
-      )}
-    </div>
-  );
-}
+import { getBookDetail } from '@/services/visualible/bookDetail';
+import { resolveEpubSource } from '@/services/visualible/epubSource';
+import { getSessionFromSearchParams } from '@/services/visualible/session';
 
 function HomeContent() {
   const router = useRouter();
@@ -54,18 +18,27 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null);
   const isOpening = useRef(false);
 
-  const bookName = searchParams?.get('book') ?? null;
+  const session = searchParams ? getSessionFromSearchParams(searchParams) : null;
 
   useEffect(() => {
-    if (!bookName || !appService || !libraryLoaded || isOpening.current) return;
+    if (!session || !appService || !libraryLoaded || isOpening.current) return;
     isOpening.current = true;
 
     const open = async () => {
-      const fileUrl = buildFileUrl(bookName);
+      const detail = await getBookDetail(session.slug, session.token);
+      const source = await resolveEpubSource(detail, session.token);
       const { library } = useLibraryStore.getState();
-      let book = library.find((b) => b.url === fileUrl && !b.deletedAt);
+
+      let book =
+        typeof source === 'string'
+          ? library.find((b) => b.url === source && !b.deletedAt)
+          : undefined;
       if (!book) {
-        const imported = await appService.importBook(fileUrl, library, { saveBook: false });
+        const imported = await appService.importBook(
+          source,
+          library,
+          typeof source === 'string' ? { saveBook: false } : {},
+        );
         if (!imported) {
           setError('Unable to open book');
           return;
@@ -77,9 +50,18 @@ function HomeContent() {
     };
 
     open().catch(() => setError('Unable to open book'));
-  }, [bookName, appService, libraryLoaded, envConfig, router]);
+  }, [session, appService, libraryLoaded, envConfig, router]);
 
-  if (!bookName) return <BooksList />;
+  if (!session) {
+    return (
+      <div className='flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center'>
+        <h1 className='text-xl font-semibold'>Readest</h1>
+        <p className='text-base-content/70'>
+          Open a book with <code>?slug=&lt;book-slug&gt;&amp;token=&lt;jwt&gt;</code>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className='flex min-h-screen items-center justify-center'>
