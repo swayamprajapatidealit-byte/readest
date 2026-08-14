@@ -1,6 +1,7 @@
 import {
   BOOK_CONFIG_SCHEMA_VERSION,
   BookConfig,
+  BookNote,
   BookSearchConfig,
   ViewSettings,
 } from '@/types/book';
@@ -10,6 +11,36 @@ import { DEFAULT_NEARBY_WORDS, ensureSearchMode, modeToWholeWords } from '@/util
 export const stampBookConfigSchema = <T extends Partial<BookConfig>>(config: T): T => {
   return { ...config, schemaVersion: BOOK_CONFIG_SCHEMA_VERSION };
 };
+
+/**
+ * Merge two BookConfigs: uses the config with higher reading progress as base,
+ * then merges booknotes from both (deduplicating by id, latest updatedAt wins).
+ */
+export function mergeBookConfigs(
+  current: Partial<BookConfig>,
+  backup: Partial<BookConfig>,
+): Partial<BookConfig> {
+  const currentPage = current.progress?.[0] ?? 0;
+  const backupPage = backup.progress?.[0] ?? 0;
+
+  // Use the config with higher progress as base
+  const base = backupPage > currentPage ? { ...backup } : { ...current };
+
+  // Merge booknotes from both configs
+  const noteMap = new Map<string, BookNote>();
+  for (const note of current.booknotes ?? []) {
+    noteMap.set(note.id, note);
+  }
+  for (const note of backup.booknotes ?? []) {
+    const existing = noteMap.get(note.id);
+    if (!existing || (note.updatedAt || 0) > (existing.updatedAt || 0)) {
+      noteMap.set(note.id, note);
+    }
+  }
+  base.booknotes = [...noteMap.values()];
+
+  return stampBookConfigSchema(base);
+}
 
 export const serializeRawConfig = (config: Partial<BookConfig>): string => {
   return JSON.stringify(stampBookConfigSchema(config));

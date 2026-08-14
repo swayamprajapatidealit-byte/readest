@@ -30,10 +30,7 @@ import type { SystemSettings } from '@/types/settings';
 import { DropdownProvider } from '@/context/DropdownContext';
 import { CommandPaletteProvider, CommandPalette } from '@/components/command-palette';
 import AtmosphereOverlay from '@/components/AtmosphereOverlay';
-import AppLockScreen from '@/components/AppLockScreen';
-import AppLockDialog from '@/components/settings/AppLockDialog';
 import TelemetryConsentDialog from '@/components/TelemetryConsentDialog';
-import { useAppLockStore } from '@/store/appLockStore';
 
 // One-time, on first launch after this feature ships, decide how to handle
 // PostHog telemetry for the current install:
@@ -99,11 +96,6 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
   const { applyUILanguage } = useSettingsStore();
   const { applyBackgroundTexture } = useBackgroundTexture();
   const { applyEinkMode } = useEinkMode();
-  const {
-    isInitialized: isLockInitialized,
-    isUnlocked,
-    initialize: initializeAppLock,
-  } = useAppLockStore();
   const iconSize = useDefaultIconSize();
   const [showTelemetryConsent, setShowTelemetryConsent] = useState(false);
   useSafeAreaInsets(); // Initialize safe area insets
@@ -160,25 +152,9 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
         if (globalViewSettings.isEink) {
           applyEinkMode(true);
         }
-        // Initialize the app-lock gate from on-disk settings. Until
-        // this runs, the gate renders nothing — guarantees the
-        // library can't flash on screen before the lock screen does.
-        initializeAppLock({
-          enabled: !!settings.pinCodeEnabled,
-          hash: settings.pinCodeHash,
-          salt: settings.pinCodeSalt,
-          biometricUnlockEnabled: !!settings.biometricUnlockEnabled,
-        });
       });
     }
-  }, [
-    envConfig,
-    appService,
-    applyUILanguage,
-    applyBackgroundTexture,
-    applyEinkMode,
-    initializeAppLock,
-  ]);
+  }, [envConfig, appService, applyUILanguage, applyBackgroundTexture, applyEinkMode]);
 
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
@@ -190,32 +166,18 @@ const Providers = ({ children }: { children: React.ReactNode }) => {
   // Make sure appService is available in all children components
   if (!appService) return;
 
-  // App-lock gate. While the lock store is uninitialized we render
-  // nothing — without this guard the library would flash on screen
-  // for a few hundred ms before `loadSettings` resolved and let the
-  // lock store decide whether to lock.
-  const showAppLockScreen = isLockInitialized && !isUnlocked;
-  const appShellHidden = !isLockInitialized || !isUnlocked;
-
   return (
     <CSPostHogProvider>
       <IconContext.Provider value={{ size: `${iconSize}px` }}>
         <DropdownProvider>
           <CommandPaletteProvider>
-            <div
-              aria-hidden={appShellHidden}
-              style={appShellHidden ? { display: 'none' } : undefined}
-            >
-              {children}
-              <CommandPalette />
-              <AtmosphereOverlay />
-            </div>
-            <AppLockDialog />
+            {children}
+            <CommandPalette />
+            <AtmosphereOverlay />
             <TelemetryConsentDialog
               open={showTelemetryConsent}
               onClose={() => setShowTelemetryConsent(false)}
             />
-            {showAppLockScreen && <AppLockScreen />}
           </CommandPaletteProvider>
         </DropdownProvider>
       </IconContext.Provider>

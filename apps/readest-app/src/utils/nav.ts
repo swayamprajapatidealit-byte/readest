@@ -18,27 +18,18 @@ export const navigateToReader = (
   }
 };
 
-export const navigateToLibrary = (
+export const navigateToHome = (
   router: ReturnType<typeof useRouter>,
   queryParams?: string,
   navOptions?: { scroll?: boolean },
-  navBack?: boolean,
 ) => {
-  const lastLibraryParams =
-    typeof window !== 'undefined' ? sessionStorage.getItem('lastLibraryParams') : null;
-  if (navBack && lastLibraryParams) {
-    queryParams = lastLibraryParams;
-  }
-
-  router.replace(`/library${queryParams ? `?${queryParams}` : ''}`, navOptions);
+  router.replace(`/${queryParams ? `?${queryParams}` : ''}`, navOptions);
 };
 
-export const closeReaderWindowOrGoToLibrary = (
-  router: ReturnType<typeof useRouter>,
-) => {
-  navigateToLibrary(router, '', undefined, true);
+export const closeReaderWindowOrGoToHome = (router: ReturnType<typeof useRouter>) => {
+  navigateToHome(router, '', undefined);
 };
 
-export const redirectToLibrary = () => {
-  redirect('/library');
+export const redirectToHome = () => {
+  redirect('/');
 };

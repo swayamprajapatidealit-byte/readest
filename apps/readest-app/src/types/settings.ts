@@ -202,25 +202,6 @@ export interface SystemSettings {
   metadataOthersCollapsed: boolean;
   metadataDescriptionCollapsed: boolean;
 
-  /**
-   * App-lock PIN. When `pinCodeEnabled` is true, the user must enter
-   * a 4-digit PIN before the library/reader is rendered on app launch.
-   * `pinCodeHash` is `bytesToHex(PBKDF2-SHA256(pin, hexToBytes(pinCodeSalt)))`,
-   * never the plaintext PIN. Cleared together with `pinCodeEnabled = false`
-   * when the user disables the lock.
-   */
-  pinCodeEnabled?: boolean;
-  pinCodeHash?: string;
-  pinCodeSalt?: string;
-  /**
-   * Mobile-only. When true AND a PIN lock is configured AND the device
-   * has enrolled biometrics, the app-lock screen prompts for biometrics
-   * (fingerprint / Face ID) first and falls back to the PIN. No effect on
-   * desktop/web (no biometric plugin). `undefined` is treated as `false`
-   * so existing PIN users are never silently switched to biometric.
-   */
-  biometricUnlockEnabled?: boolean;
-
   /** Optional by design — see {@link ReadestCloudSettings}. Never defaulted. */
   readestCloud?: ReadestCloudSettings;
 

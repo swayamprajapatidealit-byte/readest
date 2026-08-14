@@ -9,10 +9,9 @@
  * pool" without pulling in `p-limit`.
  *
  * Why not throw on the first failure (Promise.all semantics):
- *   - Several call sites (OPDS sync, nav build) treat the per-item
- *     failure as a recoverable, individually-loggable event. A single
- *     bad EPUB section, or a single 503'd OPDS download, must not
- *     abort the rest of the batch.
+ *   - Call sites like nav build treat the per-item failure as a
+ *     recoverable, individually-loggable event. A single bad EPUB
+ *     section must not abort the rest of the batch.
  *   - The shape `{ item, result } | { item, error }` lets callers
  *     post-process success and failure separately without an extra
  *     try/catch around every worker invocation.

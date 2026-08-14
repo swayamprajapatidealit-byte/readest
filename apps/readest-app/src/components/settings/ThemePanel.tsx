@@ -39,7 +39,7 @@ import HighlightColorsEditor from './theme/HighlightColorsEditor';
 import CodeHighlightingSettings from './theme/CodeHighlightingSettings';
 import ReadingRulerSettings from './theme/ReadingRulerSettings';
 import { Toggle } from '../primitives/toggle';
-import LibrarySettings from './theme/LibrarySettings';
+import BookCoverSettings from './theme/BookCoverSettings';
 
 const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset }) => {
   const _ = useTranslation();
@@ -479,10 +479,10 @@ const ThemePanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterReset
             data-setting-id='settings.color.codeHighlighting'
           />
 
-          <LibrarySettings
+          <BookCoverSettings
             skeuomorphicCovers={skeuomorphicCovers}
             onToggle={setSkeuomorphicCovers}
-            data-setting-id='settings.library.skeuomorphicCovers'
+            data-setting-id='settings.bookCovers.skeuomorphicCovers'
           />
         </>
       )}

@@ -1,5 +1,5 @@
 import { BookConfig, BookNote, HighlightColor, HighlightStyle } from '@/types/book';
-import { mergeBookConfigs } from '@/services/backupService';
+import { mergeBookConfigs } from '@/utils/serializer';
 import { md5 } from 'js-md5';
 import { AnnotationImportProvider } from '../types';
 

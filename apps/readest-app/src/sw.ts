@@ -28,8 +28,9 @@ const serwist = new Serwist({
   runtimeCaching: [
     {
       matcher: ({ url, request }) => {
-        const clientRoutes = ['/library', '/reader'];
-        const isClientRoute = clientRoutes.some((route) => url.pathname.startsWith(route));
+        const clientRoutes = ['/reader'];
+        const isClientRoute =
+          url.pathname === '/' || clientRoutes.some((route) => url.pathname.startsWith(route));
         return isClientRoute && request.mode === 'navigate';
       },
       handler: new NetworkFirst({

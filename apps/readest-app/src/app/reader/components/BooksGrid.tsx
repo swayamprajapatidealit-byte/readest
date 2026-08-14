@@ -28,7 +28,7 @@ import ReadingStatsTracker from './ReadingStatsTracker';
 interface BooksGridProps {
   bookKeys: string[];
   onCloseBook: (bookKey: string) => void;
-  onGoToLibrary: () => void;
+  onGoToHome: () => void;
 }
 
 /**
@@ -68,7 +68,7 @@ interface BookCellProps {
   hoveredBookKey: string | null;
   isDropdownOpen: boolean;
   setDropdownOpenForBook: (bookKey: string, isOpen: boolean) => void;
-  onGoToLibrary: () => void;
+  onGoToHome: () => void;
 }
 
 const BookCellInner: React.FC<BookCellProps> = ({
@@ -79,7 +79,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
   hoveredBookKey,
   isDropdownOpen,
   setDropdownOpenForBook,
-  onGoToLibrary,
+  onGoToHome,
 }) => {
   // Per-field selectors — see store/readerProgressStore.ts header for the
   // "destructure-subscribes-the-whole-store" rationale.
@@ -149,7 +149,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
         screenInsets={screenInsets}
         bookTitle={book.title}
         isHoveredAnim={isHoveredAnim}
-        onGoToLibrary={onGoToLibrary}
+        onGoToHome={onGoToHome}
         onDropdownOpenChange={onDropdownOpenChange}
       />
       {/*
@@ -266,7 +266,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
 
 const BookCell = React.memo(BookCellInner);
 
-const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onGoToLibrary }) => {
+const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onGoToHome }) => {
   const _ = useTranslation();
   // Per-field selectors — see store/readerProgressStore.ts header. The grid
   // only re-renders on hoveredBookKey changes (header/footer toggle);
@@ -349,7 +349,7 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onGoToLibrary }) => {
           hoveredBookKey={hoveredBookKey}
           isDropdownOpen={dropdownOpenBook === bookKey}
           setDropdownOpenForBook={setDropdownOpenForBook}
-          onGoToLibrary={onGoToLibrary}
+          onGoToHome={onGoToHome}
         />
       ))}
     </div>

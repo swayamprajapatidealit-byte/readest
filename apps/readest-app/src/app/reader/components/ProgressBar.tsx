@@ -16,7 +16,7 @@ import {
 import { footerInfoVisible, footerReservesBand } from '../utils/footerBand';
 import StatusInfo from './StatusInfo.tsx';
 import StickyProgressBar from './StickyProgressBar.tsx';
-import { convertPagesToTimeRemainingMinutes } from '@/app/library/utils/libraryUtils.ts';
+import { convertPagesToTimeRemainingMinutes } from '@/app/reader/utils/readingTime';
 import { useMedianPageDurationSecs } from '@/hooks/useMedianPageDurationSecs';
 
 interface ProgressBarProps {

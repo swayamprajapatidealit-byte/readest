@@ -15,7 +15,7 @@ import { SystemSettings } from '@/types/settings';
 import { uniqueId } from '@/utils/misc';
 import { throttle } from '@/utils/throttle';
 import { eventDispatcher } from '@/utils/event';
-import { closeReaderWindowOrGoToLibrary, navigateToLibrary } from '@/utils/nav';
+import { closeReaderWindowOrGoToHome, navigateToHome } from '@/utils/nav';
 import { BOOK_IDS_SEPARATOR } from '@/services/constants';
 import { BookDetailModal } from '@/components/metadata';
 
@@ -69,7 +69,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
           eventDispatcher.dispatch('toast', {
             message: _('Unable to open book'),
             callback: () => {
-              closeReaderWindowOrGoToLibrary(router);
+              closeReaderWindowOrGoToHome(router);
             },
             timeout: 2000,
             type: 'error',
@@ -105,12 +105,12 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
 
     window.addEventListener('beforeunload', handleCloseBooks);
     eventDispatcher.on('beforereload', handleCloseBooks);
-    eventDispatcher.on('close-reader', handleCloseReaderToLibrary);
+    eventDispatcher.on('close-reader', handleCloseReaderToHome);
     eventDispatcher.on('quit-app', handleCloseBooks);
     return () => {
       window.removeEventListener('beforeunload', handleCloseBooks);
       eventDispatcher.off('beforereload', handleCloseBooks);
-      eventDispatcher.off('close-reader', handleCloseReaderToLibrary);
+      eventDispatcher.off('close-reader', handleCloseReaderToHome);
       eventDispatcher.off('quit-app', handleCloseBooks);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,7 +135,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     } catch {
       console.info('Error closing book', bookKey);
     }
-    // Closes that keep the webview alive (back to library, Android back, pane
+    // Closes that keep the webview alive (back to home, Android back, pane
     // dismiss) let a live TTS session continue in the background;
     // webview-destroying closes (quit, window close, reload) hard-stop so the
     // media session and Android foreground service tear down with the page.
@@ -146,16 +146,16 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     clearViewState(bookKey);
   };
 
-  const navigateBackToLibrary = () => {
-    navigateToLibrary(router, '', undefined, true);
+  const navigateBackToHome = () => {
+    navigateToHome(router);
   };
 
-  const saveSettingsAndGoToLibrary = () => {
+  const saveSettingsAndGoToHome = () => {
     saveSettings(envConfig, settings);
-    navigateBackToLibrary();
+    navigateBackToHome();
   };
 
-  const handleCloseReaderToLibrary = () => {
+  const handleCloseReaderToHome = () => {
     return handleCloseBooks(true);
   };
 
@@ -169,9 +169,9 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     await saveSettings(envConfig, settings);
   }, 200);
 
-  const handleCloseBooksToLibrary = async () => {
+  const handleCloseBooksToHome = async () => {
     handleCloseBooks(true);
-    navigateBackToLibrary();
+    navigateBackToHome();
   };
 
   const handleCloseBook = async (bookKey: string) => {
@@ -184,7 +184,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     }
     dismissBook(bookKey);
     if (bookKeys.filter((key) => key !== bookKey).length == 0) {
-      saveSettingsAndGoToLibrary();
+      saveSettingsAndGoToHome();
     }
   };
 
@@ -209,7 +209,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       <BooksGrid
         bookKeys={bookKeys}
         onCloseBook={handleCloseBook}
-        onGoToLibrary={handleCloseBooksToLibrary}
+        onGoToHome={handleCloseBooksToHome}
       />
       {isSettingsDialogOpen && <SettingsDialog bookKey={settingsDialogBookKey} />}
       <Notebook />

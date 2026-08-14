@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { VscLibrary } from 'react-icons/vsc';
+import { VscClose } from 'react-icons/vsc';
 import { MdOutlineMenu } from 'react-icons/md';
 
 import { Insets } from '@/types/misc';
@@ -32,7 +32,7 @@ interface HeaderBarProps {
   isHoveredAnim: boolean;
   gridInsets: Insets;
   screenInsets: Insets;
-  onGoToLibrary: () => void;
+  onGoToHome: () => void;
   onDropdownOpenChange?: (isOpen: boolean) => void;
 }
 
@@ -42,7 +42,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   isHoveredAnim,
   gridInsets,
   screenInsets,
-  onGoToLibrary,
+  onGoToHome,
   onDropdownOpenChange,
 }) => {
   const _ = useTranslation();
@@ -198,11 +198,11 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
               </div>
             )}
             <button
-              title={_('Go to Library')}
+              title={_('Close Book')}
               className='btn btn-ghost hidden h-8 min-h-8 w-8 p-0 sm:flex'
-              onClick={onGoToLibrary}
+              onClick={onGoToHome}
             >
-              <VscLibrary size={iconSize18} className='fill-base-content' />
+              <VscClose size={iconSize18} className='fill-base-content' />
             </button>
             <BookmarkToggler bookKey={bookKey} />
           </div>
@@ -254,10 +254,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         >
           <div
             aria-hidden='true'
-            className={clsx(
-              'line-clamp-1 text-center text-xs font-semibold',
-              'max-w-[50%]',
-            )}
+            className={clsx('line-clamp-1 text-center text-xs font-semibold', 'max-w-[50%]')}
           >
             {bookTitle}
           </div>
