@@ -770,7 +770,6 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
           onChange={() => setShowBatteryPercentage(!showBatteryPercentage)}
         />
       </BoxedList>
-
     </div>
   );
 };

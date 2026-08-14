@@ -1,12 +1,6 @@
 import clsx from 'clsx';
 import React, { useState } from 'react';
-import {
-  MdOutlineDelete,
-  MdOutlineEdit,
-  MdMenu,
-  MdExpandMore,
-  MdExpandLess,
-} from 'react-icons/md';
+import { MdOutlineDelete, MdOutlineEdit, MdMenu, MdExpandMore, MdExpandLess } from 'react-icons/md';
 
 import { Book } from '@/types/book';
 import { BookMetadata } from '@/libs/document';

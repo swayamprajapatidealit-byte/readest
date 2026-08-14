@@ -161,7 +161,8 @@
       "Read(//home/ideal38/ideal-it/**)",
       "Bash(cd /home/ideal38/ideal-it/readest/apps/readest-app/src && echo \"=== demoBooks callers ===\"; grep -rln \"demoBooks\\\\|isDemoBook\\\\|demoLibraries\" . --include=*.ts --include=*.tsx *)",
       "Read(//home/ideal38/ideal-it/src/**)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(bash .husky/pre-push)"
     ],
     "additionalDirectories": [
       "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC"

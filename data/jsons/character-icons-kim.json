@@ -2430,10 +2430,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Anchises' son",
-        "prince of Troy"
-      ],
+      "alternative_names": ["Anchises' son", "prince of Troy"],
       "motivations": [
         {
           "text": "Aeneas seeks to defend the Trojans and prove his prowess in battle, especially when challenged by Greek heroes.",
@@ -2555,10 +2552,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "queen Hecuba",
-        "the queen"
-      ],
+      "alternative_names": ["queen Hecuba", "the queen"],
       "motivations": [
         {
           "text": "Hecuba is motivated by maternal love and fear for Hector's life, begging him not to face Achilles.",
@@ -3381,9 +3375,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the Cytheran chief"
-      ],
+      "alternative_names": ["the Cytheran chief"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -4158,9 +4150,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the chief of augurs"
-      ],
+      "alternative_names": ["the chief of augurs"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -4234,9 +4224,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "rosy-cheeked Briseis"
-      ],
+      "alternative_names": ["rosy-cheeked Briseis"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -4397,9 +4385,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Eurybates of Ithaca"
-      ],
+      "alternative_names": ["Eurybates of Ithaca"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -4462,9 +4448,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "silver-footed Thetis"
-      ],
+      "alternative_names": ["silver-footed Thetis"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -4595,9 +4579,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "aged Peleus"
-      ],
+      "alternative_names": ["aged Peleus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -5054,11 +5036,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "aged Phoenix",
-        "aged knight",
-        "father, loved of Jove"
-      ],
+      "alternative_names": ["aged Phoenix", "aged knight", "father, loved of Jove"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -5173,9 +5151,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "far-famed Campaneus"
-      ],
+      "alternative_names": ["far-famed Campaneus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -5427,10 +5403,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Creon's noble son",
-        "Creon’s noble son"
-      ],
+      "alternative_names": ["Creon's noble son", "Creon’s noble son"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -6218,9 +6191,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Blameless Teucer"
-      ],
+      "alternative_names": ["Blameless Teucer"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -6363,10 +6334,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Evaemon’s glorious son",
-        "Evaemon’s noble son"
-      ],
+      "alternative_names": ["Evaemon’s glorious son", "Evaemon’s noble son"],
       "motivations": [],
       "conflicts": [
         {
@@ -6454,10 +6422,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Fair-haired Helen’s spouse",
-        "Paris"
-      ],
+      "alternative_names": ["Fair-haired Helen’s spouse", "Paris"],
       "motivations": [
         {
           "text": "Paris proposes to fight Menelaus in single combat for Helen and her wealth, hoping to end the war.",
@@ -6860,9 +6825,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "white-armed Andromache"
-      ],
+      "alternative_names": ["white-armed Andromache"],
       "motivations": [
         {
           "text": "Andromache is motivated by concern for Hector's safety and the well-being of their son, Astyanax.",
@@ -7346,9 +7309,7 @@
         "found": true
       },
       "biography": [],
-      "alternative_names": [
-        "Polyremon’s son"
-      ],
+      "alternative_names": ["Polyremon’s son"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -7717,9 +7678,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Nobly born Alastor"
-      ],
+      "alternative_names": ["Nobly born Alastor"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -7977,9 +7936,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "renowned Antenor"
-      ],
+      "alternative_names": ["renowned Antenor"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -8133,9 +8090,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Lycaon's eminent son"
-      ],
+      "alternative_names": ["Lycaon's eminent son"],
       "motivations": [
         {
           "text": "Pandarus is motivated to prove his prowess as an archer and to bring glory to himself and the Trojans by wounding Greek leaders.",
@@ -8579,10 +8534,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Great Agenor",
-        "magnanimous Agenor"
-      ],
+      "alternative_names": ["Great Agenor", "magnanimous Agenor"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -9557,9 +9509,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Asius son of Hyrtacus"
-      ],
+      "alternative_names": ["Asius son of Hyrtacus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -9639,9 +9589,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "great in war Polites"
-      ],
+      "alternative_names": ["great in war Polites"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -10354,13 +10302,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Astyanax",
-        "Jove-born stream",
-        "Scamander",
-        "Xanthus",
-        "river-god"
-      ],
+      "alternative_names": ["Astyanax", "Jove-born stream", "Scamander", "Xanthus", "river-god"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -10589,9 +10531,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the Mace-bearer"
-      ],
+      "alternative_names": ["the Mace-bearer"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -10780,11 +10720,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Peer of Mars",
-        "Phyleus' son",
-        "Phylides"
-      ],
+      "alternative_names": ["Peer of Mars", "Phyleus' son", "Phylides"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -11403,9 +11339,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Antenor’s son"
-      ],
+      "alternative_names": ["Antenor’s son"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -12412,9 +12346,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the Augur"
-      ],
+      "alternative_names": ["the Augur"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -12871,9 +12803,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Blooming Themis"
-      ],
+      "alternative_names": ["Blooming Themis"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -12952,9 +12882,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "peerless dame Laothoe"
-      ],
+      "alternative_names": ["peerless dame Laothoe"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -13017,9 +12945,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Altes the renowned and aged"
-      ],
+      "alternative_names": ["Altes the renowned and aged"],
       "motivations": [],
       "conflicts": [],
       "character_type": "supporting",
@@ -13422,9 +13348,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Good Eurymedon"
-      ],
+      "alternative_names": ["Good Eurymedon"],
       "motivations": [],
       "conflicts": [],
       "character_type": "minor",
@@ -13809,9 +13733,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "lord of many steeds"
-      ],
+      "alternative_names": ["lord of many steeds"],
       "motivations": [],
       "conflicts": [],
       "character_type": "minor",
@@ -14213,9 +14135,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Amyntor, son of Ormenus"
-      ],
+      "alternative_names": ["Amyntor, son of Ormenus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -14839,9 +14759,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Centaurs"
-      ],
+      "alternative_names": ["Centaurs"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -14933,9 +14851,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Aegeon"
-      ],
+      "alternative_names": ["Aegeon"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -14981,9 +14897,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Cronus"
-      ],
+      "alternative_names": ["Cronus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -15224,9 +15138,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Alcyone"
-      ],
+      "alternative_names": ["Alcyone"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -17042,10 +16954,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Vision",
-        "fatal Vision"
-      ],
+      "alternative_names": ["Vision", "fatal Vision"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -17562,9 +17471,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Merops the Percosian"
-      ],
+      "alternative_names": ["Merops the Percosian"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -19133,9 +19040,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Dionysus"
-      ],
+      "alternative_names": ["Dionysus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -20179,9 +20084,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Charis of the snowy veil"
-      ],
+      "alternative_names": ["Charis of the snowy veil"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -20365,9 +20268,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the gray Ancient"
-      ],
+      "alternative_names": ["the gray Ancient"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -20413,9 +20314,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Graces"
-      ],
+      "alternative_names": ["Graces"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -21105,9 +21004,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Oceanus"
-      ],
+      "alternative_names": ["Oceanus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -21491,9 +21388,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the Boeotian"
-      ],
+      "alternative_names": ["the Boeotian"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -21999,9 +21894,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Young Periphoetes"
-      ],
+      "alternative_names": ["Young Periphoetes"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -23844,9 +23737,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "King Pytemenes"
-      ],
+      "alternative_names": ["King Pytemenes"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -23938,9 +23829,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "hoary seer"
-      ],
+      "alternative_names": ["hoary seer"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -24990,9 +24879,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Cyllenian Otus"
-      ],
+      "alternative_names": ["Cyllenian Otus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25222,9 +25109,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Mastor’s son"
-      ],
+      "alternative_names": ["Mastor’s son"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25270,9 +25155,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Pisenor’s son"
-      ],
+      "alternative_names": ["Pisenor’s son"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25565,9 +25448,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "noble Agathon"
-      ],
+      "alternative_names": ["noble Agathon"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25705,9 +25586,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "gallant Dios"
-      ],
+      "alternative_names": ["gallant Dios"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25753,9 +25632,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "divine in presence Mestor"
-      ],
+      "alternative_names": ["divine in presence Mestor"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -25801,9 +25678,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "the gallant knight Troilus"
-      ],
+      "alternative_names": ["the gallant knight Troilus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -26560,9 +26435,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Leto"
-      ],
+      "alternative_names": ["Leto"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -26654,11 +26527,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Ajax the Greater",
-        "Telamonian Ajax",
-        "large-limbed Ajax"
-      ],
+      "alternative_names": ["Ajax the Greater", "Telamonian Ajax", "large-limbed Ajax"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -27110,9 +26979,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Ancaeus the Pleuronian"
-      ],
+      "alternative_names": ["Ancaeus the Pleuronian"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",
@@ -27353,9 +27220,7 @@
           ]
         }
       ],
-      "alternative_names": [
-        "Zephyrus"
-      ],
+      "alternative_names": ["Zephyrus"],
       "motivations": [],
       "conflicts": [],
       "character_type": "mention-only",

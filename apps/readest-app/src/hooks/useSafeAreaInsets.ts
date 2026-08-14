@@ -23,7 +23,7 @@ export const useSafeAreaInsets = () => {
   const onUpdateInsets = useCallback(() => {
     const rootStyles = getComputedStyle(document.documentElement);
     const hasCustomProperties = rootStyles.getPropertyValue('--safe-area-inset-top');
-    
+
     if (hasCustomProperties) {
       const top = parseFloat(rootStyles.getPropertyValue('--safe-area-inset-top')) || 0;
       const right = parseFloat(rootStyles.getPropertyValue('--safe-area-inset-right')) || 0;
