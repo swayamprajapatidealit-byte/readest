@@ -1,56 +1,40 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEnv } from '@/context/EnvContext';
 import { useLibrary } from '@/hooks/useLibrary';
-import { useLibraryStore } from '@/store/libraryStore';
-import { navigateToReader } from '@/utils/nav';
-import { getBookDetail } from '@/services/visualible/bookDetail';
-import { resolveEpubSource } from '@/services/visualible/epubSource';
+import { useSessionStore } from '@/store/sessionStore';
+import { openVisualibleBook } from '@/services/visualible/openBook';
 import { getSessionFromSearchParams } from '@/services/visualible/session';
+import Reader from '@/app/reader/components/Reader';
 
 function HomeContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { envConfig, appService } = useEnv();
   const { libraryLoaded } = useLibrary();
   const [error, setError] = useState<string | null>(null);
+  // Drives which book(s) to render, purely in memory — never reflected in the
+  // URL. The URL stays `?slug=&token=` for the whole session; refreshing
+  // re-resolves from scratch rather than restoring from a persisted `?ids=`.
+  const [readyIds, setReadyIds] = useState<string | null>(null);
   const isOpening = useRef(false);
 
   const session = searchParams ? getSessionFromSearchParams(searchParams) : null;
 
   useEffect(() => {
-    if (!session || !appService || !libraryLoaded || isOpening.current) return;
+    if (!session || !appService || !libraryLoaded || isOpening.current || readyIds) return;
     isOpening.current = true;
+    useSessionStore.getState().setSession(session);
 
-    const open = async () => {
-      const detail = await getBookDetail(session.slug, session.token);
-      const source = await resolveEpubSource(detail, session.token);
-      const { library } = useLibraryStore.getState();
+    openVisualibleBook(session.slug, session.token, appService, envConfig, session.pipelineId)
+      .then(setReadyIds)
+      .catch(() => setError('Unable to open book'));
+  }, [session, appService, libraryLoaded, envConfig, readyIds]);
 
-      let book =
-        typeof source === 'string'
-          ? library.find((b) => b.url === source && !b.deletedAt)
-          : undefined;
-      if (!book) {
-        const imported = await appService.importBook(
-          source,
-          library,
-          typeof source === 'string' ? { saveBook: false } : {},
-        );
-        if (!imported) {
-          setError('Unable to open book');
-          return;
-        }
-        book = imported;
-        await useLibraryStore.getState().updateBooks(envConfig, [book]);
-      }
-      navigateToReader(router, [book.hash]);
-    };
-
-    open().catch(() => setError('Unable to open book'));
-  }, [session, appService, libraryLoaded, envConfig, router]);
+  if (readyIds) {
+    return <Reader ids={readyIds} />;
+  }
 
   if (!session) {
     return (

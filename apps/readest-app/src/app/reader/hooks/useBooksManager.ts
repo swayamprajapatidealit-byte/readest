@@ -1,36 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useEnv } from '@/context/EnvContext';
 import { useReaderStore } from '@/store/readerStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { uniqueId } from '@/utils/misc';
 import { useParallelViewStore } from '@/store/parallelViewStore';
-import { navigateToReader } from '@/utils/nav';
 import { eventDispatcher } from '@/utils/event';
 import { consumePendingTTSAutoplay } from '@/utils/ttsAutoplay';
 import { useTranslation } from '@/hooks/useTranslation';
 
+// bookKeys are never mirrored to the URL — the address bar stays `?slug=&token=`
+// for the whole session (see src/app/page.tsx). Adding/removing a book here is
+// purely Zustand state (setBookKeys/initViewState); a refresh loses track of
+// which books were open, which is accepted (see plan notes).
 const useBooksManager = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const _ = useTranslation();
   const { envConfig } = useEnv();
   const { bookKeys } = useReaderStore();
   const { setBookKeys, initViewState } = useReaderStore();
   const { sideBarBookKey, setSideBarBookKey } = useSidebarStore();
-  const [shouldUpdateSearchParams, setShouldUpdateSearchParams] = useState(false);
   const { setParallel } = useParallelViewStore();
-
-  useEffect(() => {
-    if (shouldUpdateSearchParams) {
-      const ids = bookKeys.map((key) => key.split('-')[0]!);
-      if (ids.length > 0) {
-        navigateToReader(router, ids, searchParams?.toString() || '', { scroll: false });
-      }
-      setShouldUpdateSearchParams(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookKeys, shouldUpdateSearchParams]);
 
   // initViewState is called fire-and-forget here; it rejects when the book is
   // missing (e.g. "Book not found" after a library reload dropped the in-memory
@@ -42,7 +30,7 @@ const useBooksManager = () => {
     eventDispatcher.dispatch('toast', { message: _('Unable to open book'), type: 'error' });
   };
 
-  // Append a new book and sync with bookKeys and URL
+  // Append a new book and sync with bookKeys
   const appendBook = (id: string, isPrimary: boolean, isParallel: boolean) => {
     const newKey = `${id}-${uniqueId()}`;
     initViewState(envConfig, id, newKey, isPrimary).catch(handleOpenError);
@@ -52,7 +40,6 @@ const useBooksManager = () => {
     }
     if (isParallel) setParallel([sideBarBookKey!, newKey]);
     setSideBarBookKey(newKey);
-    setShouldUpdateSearchParams(true);
   };
 
   // Jump the switched-in book to a deep-link cfi (#4887) once its view has
@@ -128,7 +115,6 @@ const useBooksManager = () => {
     initViewState(envConfig, bookHash, newKey, true).catch(handleOpenError);
     setBookKeys([newKey]);
     setSideBarBookKey(newKey);
-    setShouldUpdateSearchParams(true);
     if (cfi) goToCfiWhenReady(newKey, cfi);
   };
 
@@ -155,11 +141,10 @@ const useBooksManager = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookKeys]);
 
-  // Close a book and sync with bookKeys and URL
+  // Close a book and sync with bookKeys
   const dismissBook = (bookKey: string) => {
     const updatedKeys = bookKeys.filter((key) => key !== bookKey);
     setBookKeys(updatedKeys);
-    setShouldUpdateSearchParams(true);
   };
 
   const getNextBookKey = (bookKey: string) => {

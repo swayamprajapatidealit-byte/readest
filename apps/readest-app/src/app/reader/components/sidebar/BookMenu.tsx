@@ -1,11 +1,11 @@
 import clsx from 'clsx';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { MdCheck } from 'react-icons/md';
 import { useEnv } from '@/context/EnvContext';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
-import { useLibraryStore } from '@/store/libraryStore';
+import { useSessionStore } from '@/store/sessionStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useParallelViewStore } from '@/store/parallelViewStore';
@@ -15,6 +15,9 @@ import { DOWNLOAD_READEST_URL } from '@/services/constants';
 import { saveViewSettings } from '@/helpers/settings';
 import { setProofreadRulesVisibility } from '@/app/reader/components/ProofreadRules';
 import { setAboutDialogVisible } from '@/components/AboutWindow';
+import { getRecentPurchaseCoverUrl, getRecentPurchases } from '@/services/visualible/library';
+import { openVisualibleBook } from '@/services/visualible/openBook';
+import type { RecentPurchaseItemData } from '@/services/visualible/types';
 import useBooksManager from '../../hooks/useBooksManager';
 import MenuItem from '@/components/MenuItem';
 import Menu from '@/components/Menu';
@@ -26,16 +29,24 @@ interface BookMenuProps {
 
 const BookMenu: React.FC<BookMenuProps> = ({ menuClassName, setIsDropdownOpen }) => {
   const _ = useTranslation();
-  const { envConfig } = useEnv();
+  const { envConfig, appService } = useEnv();
   const { bookKeys, recreateViewer, getViewSettings } = useReaderStore();
-  const { getVisibleLibrary } = useLibraryStore();
-  const { openParallelView } = useBooksManager();
+  const { session } = useSessionStore();
+  const { openParallelView, appendBook } = useBooksManager();
   const { sideBarBookKey } = useSidebarStore();
   const { getConfig } = useBookDataStore();
   const { parallelViews, setParallel, unsetParallel } = useParallelViewStore();
   const viewSettings = getViewSettings(sideBarBookKey!);
 
   const [isSortedTOC, setIsSortedTOC] = React.useState(viewSettings?.sortedTOC || false);
+  const [purchasedBooks, setPurchasedBooks] = useState<RecentPurchaseItemData[]>([]);
+
+  useEffect(() => {
+    if (!session) return;
+    getRecentPurchases(session.token, { limit: 20 })
+      .then((res) => setPurchasedBooks(res.results.map((item) => item.itemData)))
+      .catch((err) => console.error('[recent-purchase] failed to load', err));
+  }, [session]);
 
   // Used purely to grey out "Clear Annotations" when there's nothing to
   // clear. The actual delete + confirm dialog lives in Annotator (which
@@ -50,6 +61,35 @@ const BookMenu: React.FC<BookMenuProps> = ({ menuClassName, setIsDropdownOpen })
 
   const handleParallelView = (id: string) => {
     openParallelView(id);
+    setIsDropdownOpen?.(false);
+  };
+  // The purchased-library list includes books never opened this session (no
+  // fetched EPUB/bookDoc yet) — fetch and import on demand before opening the
+  // parallel view. openVisualibleBook caches by slug, so re-clicking an
+  // already-opened book skips straight to the cached hash.
+  const handleOpenPurchasedBook = async (item: RecentPurchaseItemData) => {
+    if (!appService || !session) return;
+    try {
+      const hash = await openVisualibleBook(item.slug, session.token, appService, envConfig);
+      handleParallelView(hash);
+    } catch (err) {
+      console.error('Failed to open purchased book', err);
+      eventDispatcher.dispatch('toast', { message: _('Unable to open book'), type: 'error' });
+    }
+  };
+  const getReadingStatusLabel = (item: RecentPurchaseItemData): string => {
+    const pageNumber = item.readingData?.pageNumber;
+    if (pageNumber === undefined) return _('Not started');
+    if (pageNumber >= 100) return _('Completed');
+    return `${pageNumber}%`;
+  };
+  // Opens a second, independent pane of the *current* book (isParallel=false,
+  // unlike Parallel Read, so the two panes scroll independently rather than
+  // mirroring each other). isPrimary=false so this pane's own progress/
+  // viewSettings changes don't fight the canonical saved position.
+  const handleSplitView = () => {
+    if (!sideBarBookKey) return;
+    appendBook(sideBarBookKey.split('-')[0]!, false, false);
     setIsDropdownOpen?.(false);
   };
   const handleReloadPage = () => {
@@ -114,31 +154,30 @@ const BookMenu: React.FC<BookMenuProps> = ({ menuClassName, setIsDropdownOpen })
         Icon={parallelViews.length > 0 && bookKeys.length > 1 ? MdCheck : undefined}
       >
         <ul className='max-h-60 overflow-y-auto'>
-          {getVisibleLibrary()
-            .filter((book) => !!book.downloadedAt)
-            .slice(0, 20)
-            .map((book) => (
-              <MenuItem
-                key={book.hash}
-                Icon={
-                  <img
-                    src={book.coverImageUrl!}
-                    alt={book.title}
-                    width={56}
-                    height={80}
-                    className='aspect-auto max-h-8 max-w-4 rounded-sm shadow-md'
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                }
-                label={book.title}
-                labelClass='max-w-36'
-                onClick={() => handleParallelView(book.hash)}
-              />
-            ))}
+          {purchasedBooks.map((item) => (
+            <MenuItem
+              key={item.id}
+              Icon={
+                <img
+                  src={getRecentPurchaseCoverUrl(item)}
+                  alt={item.title}
+                  width={56}
+                  height={80}
+                  className='aspect-auto max-h-8 max-w-4 rounded-sm shadow-md'
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              }
+              label={item.title}
+              labelClass='max-w-36'
+              description={getReadingStatusLabel(item)}
+              onClick={() => handleOpenPurchasedBook(item)}
+            />
+          ))}
         </ul>
       </MenuItem>
+      <MenuItem label={_('Split View')} onClick={handleSplitView} />
       {bookKeys.length > 1 &&
         (parallelViews.length > 0 ? (
           <MenuItem label={_('Exit Parallel Read')} onClick={handleUnsetParallel} />

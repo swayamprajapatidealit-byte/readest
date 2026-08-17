@@ -232,6 +232,29 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
 
   const docLinkHandler = async (event: Event) => {
     const detail = (event as CustomEvent).detail;
+
+    // Pipeline-sourced footnotes (services/visualible/ebookContent.ts) are
+    // anchored to the book's own footnote-reference marker by DOM id. Divert
+    // those straight to the entity panel ("End Note") instead of the small
+    // footnote popup below — before footnoteHandler ever sees the click.
+    const linkAnchor = (detail as { a: HTMLAnchorElement }).a;
+    const anchorId = linkAnchor?.id;
+    if (anchorId) {
+      const footnotes = getBookData(bookKey)?.ebookContent?.footnotes;
+      const entityIndex = footnotes?.findIndex(
+        (footnote) => footnote.source_location.anchor_id === anchorId,
+      );
+      if (entityIndex !== undefined && entityIndex !== -1) {
+        event.preventDefault();
+        eventDispatcher.dispatch('entity-panel-open', {
+          bookKey,
+          category: 'footnote',
+          entityIndex,
+        });
+        return;
+      }
+    }
+
     // console.log('doc link click', detail);
     const gridFrame = document.querySelector(`#gridcell-${bookKey}`);
     if (!gridFrame) return;

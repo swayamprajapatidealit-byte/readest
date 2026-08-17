@@ -39,6 +39,4 @@ string — keep the two in sync.
 
 **Rule for future injections:** either inject a tag already on the allowlist, or add yours to it.
 Prefer `<font>` over `<span>` for injected non-book content: `<font>` is obsolete markup that
-book CSS essentially never targets, so translations do not inherit the book's `span { }` rules.
-
-Related: the wrapper tag is irrelevant to CFI — see [[translation-cfi-stability]].
+book CSS essentially never targets, so injected content does not inherit the book's `span { }` rules.

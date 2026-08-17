@@ -11,7 +11,7 @@ const hexToBuffer = (hex: string) => {
   return bytes.buffer;
 };
 
-const fetchSignedUrl = async (objectKey: string, token: string): Promise<string> => {
+export const fetchSignedUrl = async (objectKey: string, token: string): Promise<string> => {
   const res = await fetchWithTimeout(
     `${getAwsHost()}signed-url?key=${encodeURIComponent(objectKey)}&expires=3600`,
     { headers: buildAuthHeaders(token) },
@@ -21,7 +21,7 @@ const fetchSignedUrl = async (objectKey: string, token: string): Promise<string>
   return signedUrl;
 };
 
-const fetchAccessKey = async (
+export const fetchAccessKey = async (
   objectKey: string,
   token: string,
 ): Promise<{ key: string; iv: string }> => {
@@ -33,7 +33,7 @@ const fetchAccessKey = async (
   return (await res.json()) as { key: string; iv: string };
 };
 
-const decryptAesCbc = async (
+export const decryptAesCbc = async (
   buffer: ArrayBuffer,
   keyHex: string,
   ivHex: string,

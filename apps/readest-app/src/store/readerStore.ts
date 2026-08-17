@@ -17,7 +17,12 @@ import { formatTitle, getMetadataHash, getPrimaryLanguage } from '@/utils/book';
 import { getBaseFilename } from '@/utils/path';
 import { SUPPORTED_LANGNAMES } from '@/services/constants';
 import { useSettingsStore } from './settingsStore';
-import { BookData, useBookDataStore } from './bookDataStore';
+import {
+  BookData,
+  consumePendingBookDoc,
+  consumePendingEbookContent,
+  useBookDataStore,
+} from './bookDataStore';
 import { useLibraryStore } from './libraryStore';
 import { clearBookProgress, getBookProgress, setBookProgress } from './readerProgressStore';
 import { uniqueId } from '@/utils/misc';
@@ -180,8 +185,18 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
       }
       let file: File | null = bookData?.file ?? null;
       let bookDoc: BookDoc;
+      // Consumed unconditionally (not just on the else-branch below) so a
+      // pending doc never lingers once this book has a bookDataStore entry —
+      // it would otherwise sit in the map until something calls this with
+      // `reload`, which may never happen for a book that's never reloaded.
+      const pendingDoc = reload ? null : consumePendingBookDoc(id);
       if (bookData?.bookDoc && file && !reload) {
         bookDoc = bookData.bookDoc;
+      } else if (pendingDoc) {
+        // Already parsed once during import (services/visualible/openBook.ts) —
+        // reuse it instead of opening the file a second time.
+        file = pendingDoc.file;
+        bookDoc = pendingDoc.bookDoc;
       } else {
         console.log('Loading book', key);
         const content = (await appService.loadBookContent(book)) as BookContent;
@@ -269,7 +284,23 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
       book.metaHash = getMetadataHash(bookDoc.metadata);
 
       const isFixedLayout = bookDoc.rendition?.layout === 'pre-paginated';
-      const newBookData: BookData = { id, book, file, config, bookDoc, isFixedLayout };
+      // Falls back to whatever this book's BookData entry already has (e.g. this
+      // init running again for a book that's already open) rather than wiping it —
+      // `consumePendingEbookContent` only returns non-null on the one page load
+      // where a handoff is actually waiting.
+      const ebookContent =
+        consumePendingEbookContent(id) ??
+        useBookDataStore.getState().booksData[id]?.ebookContent ??
+        null;
+      const newBookData: BookData = {
+        id,
+        book,
+        file,
+        config,
+        bookDoc,
+        isFixedLayout,
+        ebookContent,
+      };
       useBookDataStore.setState((state) => ({
         booksData: {
           ...state.booksData,

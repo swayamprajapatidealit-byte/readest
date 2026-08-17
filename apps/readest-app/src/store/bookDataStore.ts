@@ -3,57 +3,69 @@ import { SystemSettings } from '@/types/settings';
 import { Book, BookConfig, BookNote } from '@/types/book';
 import { EnvConfigType } from '@/services/environment';
 import { BookDoc } from '@/libs/document';
+import { EbookContent } from '@/services/visualible/ebookContent';
 import { useLibraryStore } from './libraryStore';
 
-// Throttle library.json writes triggered by per-book saveConfig.
-//
-// Why: `saveConfig` ran two large fs.writeFile IPC calls *every* invocation —
-// one for the per-book config.json and one for the WHOLE library.json (because
-// saveLibraryBooks writes a backup + the file itself). For a user with N
-// books in their shelf, that's `2 * JSON.stringify(N entries)` of work + 2
-// Tauri IPC round-trips per save. With auto-save firing once per second of
-// reading (useProgressAutoSave), Chrome DevTools' Bottom-Up profile shows
-// `processIpcMessage` chewing ~25% of main-thread time during a reading
-// session — directly responsible for the swipe jank the user is reporting
-// (touchmove gets queued behind IPC processing).
-//
-// The library array itself is updated immutably via setLibrary on every save
-// (see `setLibrary(newLibrary)` below) so in-memory state and zustand
-// subscribers see the change immediately. Disk persistence can be deferred:
-// progress is also stored in each book's own config.json (which we still
-// write every time), so even if the app dies between throttle ticks the
-// shelf will reconstruct correct progress from those per-book files on
-// next launch.
-//
-// LIBRARY_SAVE_THROTTLE_MS=30s: long enough to collapse a swipe burst into a
-// single IPC, short enough that a user who closes the book within half a
-// minute still sees the shelf update without a follow-up flush. Force-flush
-// happens via flushPendingLibrarySave() on hook unmount + window blur.
-const LIBRARY_SAVE_THROTTLE_MS = 30_000;
-let librarySaveTimeoutId: ReturnType<typeof setTimeout> | null = null;
-let librarySaveAppService: { saveLibraryBooks: (books: Book[]) => Promise<void> } | null = null;
-const scheduleLibrarySave = (appService: {
-  saveLibraryBooks: (books: Book[]) => Promise<void>;
-}) => {
-  librarySaveAppService = appService;
-  if (librarySaveTimeoutId != null) return;
-  librarySaveTimeoutId = setTimeout(() => {
-    librarySaveTimeoutId = null;
-    const svc = librarySaveAppService;
-    if (!svc) return;
-    const { library } = useLibraryStore.getState();
-    svc.saveLibraryBooks(library).catch((err) => {
-      console.warn('Throttled library save failed:', err);
-    });
-  }, LIBRARY_SAVE_THROTTLE_MS);
+// Ebook content (characters/places/glossary/footnotes) is fetched during import in
+// `src/app/page.tsx`, before the book has a `BookData` entry in this store — that
+// entry is only created once the reader actually mounts (readerStore.ts's
+// `initViewState`), slightly later in the same page's lifecycle. `sessionStorage`
+// is used for the handoff (rather than a plain in-memory variable) so it keeps
+// working regardless of whether that transition happens to be a soft client-side
+// update or a full reload — cheap insurance, scoped to this tab/session only
+// (cleared on tab close, never synced/persisted long-term). Historical note: this
+// was originally load-bearing when `/` and `/reader` were on different Next.js
+// routers (App vs Pages) and that hop was *always* a hard reload — the two were
+// merged into one App-Router page, so today's hop is a normal soft transition, but
+// the sessionStorage handoff is left in place since it's harmless either way.
+const PENDING_EBOOK_CONTENT_PREFIX = 'pendingEbookContent:';
+
+const stashPendingEbookContent = (id: string, content: EbookContent): void => {
+  try {
+    sessionStorage.setItem(PENDING_EBOOK_CONTENT_PREFIX + id, JSON.stringify(content));
+  } catch (err) {
+    console.warn('Failed to stash pending ebook content:', err);
+  }
 };
-export const flushPendingLibrarySave = async () => {
-  if (librarySaveTimeoutId == null || !librarySaveAppService) return;
-  clearTimeout(librarySaveTimeoutId);
-  librarySaveTimeoutId = null;
-  const { library } = useLibraryStore.getState();
-  await librarySaveAppService.saveLibraryBooks(library);
+
+export const consumePendingEbookContent = (id: string): EbookContent | null => {
+  const key = PENDING_EBOOK_CONTENT_PREFIX + id;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    sessionStorage.removeItem(key);
+    return JSON.parse(raw) as EbookContent;
+  } catch (err) {
+    console.warn('Failed to consume pending ebook content:', err);
+    return null;
+  }
 };
+
+// Same handoff problem as ebook content above, but for the BookDoc parsed
+// during import (services/visualible/openBook.ts, via importBook's
+// onBookDocLoaded) — a live object graph (zip reader, blob URLs), not
+// JSON-serializable, so this uses an in-memory Map instead of sessionStorage.
+// Only ever needs to survive a soft transition within the same tab, which is
+// exactly what this covers.
+const pendingBookDocs = new Map<string, { file: File; bookDoc: BookDoc }>();
+
+export const stashPendingBookDoc = (id: string, file: File, bookDoc: BookDoc): void => {
+  pendingBookDocs.set(id, { file, bookDoc });
+};
+
+export const consumePendingBookDoc = (id: string): { file: File; bookDoc: BookDoc } | null => {
+  const pending = pendingBookDocs.get(id);
+  if (!pending) return null;
+  pendingBookDocs.delete(id);
+  return pending;
+};
+
+// `saveConfig` no longer writes `library.json`/`config.json` to disk (see its
+// own comment) — nothing schedules a library save anymore, so there's nothing
+// to flush. Kept as a no-op rather than removed since `useProgressAutoSave.ts`
+// still calls it on unmount/blur; safe to restore the throttled-write body
+// here once real (API-backed) persistence comes back.
+export const flushPendingLibrarySave = async () => {};
 
 export interface BookData {
   /* Persistent data shared with different views of the same book */
@@ -63,6 +75,8 @@ export interface BookData {
   config: BookConfig | null;
   bookDoc: BookDoc | null;
   isFixedLayout: boolean;
+  /* Transient, in-memory only — never persisted or synced */
+  ebookContent: EbookContent | null;
 }
 
 interface BookDataState {
@@ -78,6 +92,7 @@ interface BookDataState {
   updateBooknotes: (key: string, booknotes: BookNote[]) => BookConfig | undefined;
   getBookData: (keyOrId: string) => BookData | null;
   clearBookData: (keyOrId: string) => void;
+  setEbookContent: (keyOrId: string, content: EbookContent) => void;
 }
 
 /**
@@ -112,6 +127,24 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
       };
     });
   },
+  setEbookContent: (keyOrId: string, content: EbookContent) => {
+    const id = keyOrId.split('-')[0]!;
+    set((state) => {
+      const existing = state.booksData[id];
+      if (!existing) {
+        // Reader hasn't created this book's BookData entry yet (fetch ran during
+        // import, before navigation) — hand off via sessionStorage instead.
+        stashPendingEbookContent(id, content);
+        return state;
+      }
+      return {
+        booksData: {
+          ...state.booksData,
+          [id]: { ...existing, ebookContent: content },
+        },
+      };
+    });
+  },
   getConfig: (key: string | null) => {
     if (!key) return null;
     const id = key.split('-')[0]!;
@@ -139,13 +172,19 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
       };
     });
   },
+  // Disk/IndexedDB writes are disabled for now: progress, annotations,
+  // bookmarks, proofread rules, and Word Lens settings will move to their own
+  // Visualible API endpoints (not built yet). Until then this only updates
+  // in-memory state — every feature above keeps working normally for the
+  // current visit, it just doesn't survive a refresh. `envConfig`/`settings`
+  // are unused for now but kept in the signature so real persistence can drop
+  // back in later without touching any of this function's ~20 call sites.
   saveConfig: async (
-    envConfig: EnvConfigType,
+    _envConfig: EnvConfigType,
     bookKey: string,
     config: BookConfig,
-    settings: SystemSettings,
+    _settings: SystemSettings,
   ) => {
-    const appService = await envConfig.getAppService();
     const { library, hashIndex, setLibrary } = useLibraryStore.getState();
     const hash = bookKey.split('-')[0]!;
     const idx = hashIndex.get(hash);
@@ -170,15 +209,6 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
     // caller-provided object. This notifies Zustand subscribers and works
     // regardless of whether the caller passed the shared store config.
     get().setConfig(bookKey, { updatedAt: now });
-    const configToSave = { ...config, updatedAt: now };
-    // Per-book config: still write eagerly — it's small (one book's
-    // settings + booknotes) and is the source of truth used by sync to
-    // reconstruct the shelf if library.json is missing or stale.
-    await appService.saveBookConfig(updatedBook, configToSave, settings);
-    // Library JSON write: throttled (see scheduleLibrarySave docs) so a
-    // burst of saveConfig calls during reading doesn't fire IPC on every
-    // page turn.
-    scheduleLibrarySave(appService);
   },
   updateBooknotes: (key: string, booknotes: BookNote[]) => {
     let updatedConfig: BookConfig | undefined;

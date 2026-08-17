@@ -1,5 +1,5 @@
-// Tiny helper for the Annotator's instant quick action (translate/dictionary/
-// tts/etc.). A single long-press can emit MULTIPLE selectionchange events for
+// Tiny helper for the Annotator's instant quick action (dictionary/tts/etc.).
+// A single long-press can emit MULTIPLE selectionchange events for
 // the same selection. iOS is the worst offender: it re-confirms the native
 // selection after our deselect(), firing the action again. Running per event
 // stacked duplicate popups — e.g. two/three system-dictionary sheets on iOS.

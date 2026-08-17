@@ -710,6 +710,7 @@ export const READEST_NODE_BASE_URL = 'https://node.readest.com';
 export const VISUALIBLE_MARKETPLACE_HOST = 'https://api.visualible.com/ebook-v1/';
 export const VISUALIBLE_AWS_HOST = 'https://api.visualible.com/aws-v1/';
 export const VISUALIBLE_FILE_HOST = 'https://content.visualible.com/';
+export const VISUALIBLE_PIPELINE_HOST = 'https://api.visualible.com/pipeline-v1/';
 
 const LATEST_DOWNLOAD_BASE_URL = 'https://download.readest.com/releases';
 

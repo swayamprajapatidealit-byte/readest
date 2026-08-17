@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import { Book } from '@/types/book';
 import { useEnv } from '@/context/EnvContext';
@@ -24,13 +24,13 @@ import useBookShortcuts from '../hooks/useBookShortcuts';
 import Spinner from '@/components/Spinner';
 import SideBar from './sidebar/SideBar';
 import Notebook from './notebook/Notebook';
+import EntityPanel from './entity/EntityPanel';
 import BooksGrid from './BooksGrid';
 import SettingsDialog from '@/components/settings/SettingsDialog';
 
 const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ ids, settings }) => {
   const _ = useTranslation();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { envConfig } = useEnv();
   const { bookKeys, dismissBook, getNextBookKey } = useBooksManager();
   const { sideBarBookKey, setSideBarBookKey } = useSidebarStore();
@@ -51,8 +51,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     if (isInitiating.current) return;
     isInitiating.current = true;
 
-    const pathname = window.location.pathname;
-    const bookIds = ids || searchParams?.get('ids') || pathname.split('/reader/')[1] || '';
+    const bookIds = ids || '';
     const initialIds = bookIds.split(BOOK_IDS_SEPARATOR).filter(Boolean);
     const initialBookKeys = initialIds.map((id) => `${id}-${uniqueId()}`);
     setBookKeys(initialBookKeys);
@@ -213,6 +212,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
       />
       {isSettingsDialogOpen && <SettingsDialog bookKey={settingsDialogBookKey} />}
       <Notebook />
+      <EntityPanel />
       {showDetailsBook && (
         <BookDetailModal
           isOpen={!!showDetailsBook}

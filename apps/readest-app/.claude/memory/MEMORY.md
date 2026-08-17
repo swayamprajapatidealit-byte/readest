@@ -53,9 +53,6 @@
 - [#5397 Photos save crash](ios-photos-add-usage-description-5397.md) MERGED #5405, device-verify pending
 ## Reader Features & UI
 - [Paragraph-layout `:has()` allowlist trap](paragraph-layout-has-allowlist-trap.md) MERGED #5555; tell = computed lineHeight `normal`
-- [Translation CFI stability](translation-cfi-stability.md) MERGED #5555; `<font>` buys NOTHING; hazard = blanking source nodes
-- [Azure translator edge auth retired](azure-translator-edge-auth-retired.md) MERGED #5555; bing has NO CORS; 205/400 hide in HTTP 200
-- [#1582 translated text loses formatting](translation-inline-markup-1582.md) STILL OPEN; default `deepl` CORRUPTS markup
 - [RSVP landscape safe-area insets](rsvp-landscape-safe-area-insets-5548.md) MERGED #5548; the ONE physical pl/pr exception
 - [#3392 footer page-number jump](page-number-jump-3392.md) MERGED #5524; device IME check pending
 - [#5516 Pages in Book Details](book-details-page-count-5516.md) MERGED #5523; live count is in `bookData.config`

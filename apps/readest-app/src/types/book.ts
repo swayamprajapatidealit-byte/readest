@@ -1,4 +1,4 @@
-import { BookMetadata } from '@/libs/document';
+import { BookDoc, BookMetadata } from '@/libs/document';
 import { TTSHighlightOptions } from '@/services/tts/types';
 import { TTSHighlightGranularity } from '@/services/tts/types';
 import { TTSMediaMetadataMode } from '@/services/tts/types';
@@ -69,6 +69,15 @@ export interface ImportBookOptions {
   inPlace?: boolean;
   /** Pre-built lookup index for O(1) dedup during batch imports. */
   lookupIndex?: BookLookupIndex;
+  /**
+   * Called with the freshly-parsed document (and the file it was parsed from)
+   * right before importBook would otherwise destroy it. Set this when the
+   * caller is about to open the book for reading immediately after import —
+   * it takes ownership of the doc (import skips its own destroy call) so the
+   * reader can reuse this exact parse instead of opening the file a second
+   * time.
+   */
+  onBookDocLoaded?: (doc: BookDoc, file: File) => void;
 }
 
 export interface Book {

@@ -382,6 +382,7 @@ export async function importBook(
     inPlace = false,
     lookupIndex,
     osPlatform,
+    onBookDocLoaded,
   } = options;
   let loadedBook: BookDoc | undefined;
   let fileobj: File | undefined;
@@ -685,11 +686,18 @@ export async function importBook(
     throw error;
   } finally {
     // Release the parsed document (a PDF leaks its pdf.js worker otherwise,
-    // ~60 MB per imported file — #5387) and the opened file handle.
-    try {
-      await loadedBook?.destroy?.();
-    } catch (error) {
-      console.warn('Error destroying book document:', error);
+    // ~60 MB per imported file — #5387) and the opened file handle. Skipped
+    // when the caller took ownership via onBookDocLoaded (e.g. a caller that's
+    // about to open the book for reading right away and wants to reuse this
+    // exact parse instead of opening the file a second time).
+    if (loadedBook && fileobj && onBookDocLoaded) {
+      onBookDocLoaded(loadedBook, fileobj);
+    } else {
+      try {
+        await loadedBook?.destroy?.();
+      } catch (error) {
+        console.warn('Error destroying book document:', error);
+      }
     }
     const f = fileobj as ClosableFile | undefined;
     if (f?.close) {

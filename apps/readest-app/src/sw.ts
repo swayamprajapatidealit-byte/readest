@@ -28,10 +28,8 @@ const serwist = new Serwist({
   runtimeCaching: [
     {
       matcher: ({ url, request }) => {
-        const clientRoutes = ['/reader'];
-        const isClientRoute =
-          url.pathname === '/' || clientRoutes.some((route) => url.pathname.startsWith(route));
-        return isClientRoute && request.mode === 'navigate';
+        // The reader renders inline on `/` (no separate `/reader` route).
+        return url.pathname === '/' && request.mode === 'navigate';
       },
       handler: new NetworkFirst({
         cacheName: 'client-pages',

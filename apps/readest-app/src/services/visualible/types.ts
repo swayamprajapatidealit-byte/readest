@@ -4,10 +4,43 @@ export interface BookDetail {
   fileUrl: string;
   isSecure: boolean;
   isPurchased: boolean;
+  latestPipelineId: number;
+  // Versions the book's exclude-word list — fetching it (services/visualible/
+  // excludeWords.ts) is skipped entirely when this is 0, per the API contract.
+  excludeVersion: number;
 }
 
 export interface VisualibleSession {
   slug: string;
   token: string;
   pipelineId?: string;
+}
+
+export interface RecentPurchaseImage {
+  name: string;
+}
+
+export interface RecentPurchaseReadingData {
+  pageNumber: number;
+  updatedAt: string;
+}
+
+export interface RecentPurchaseItemData {
+  id: string;
+  slug: string;
+  title: string;
+  author: string;
+  image: RecentPurchaseImage[];
+  isGreatBook?: boolean;
+  releaseVersionInfo?: { pipelineVersion: string };
+  readingData?: RecentPurchaseReadingData;
+}
+
+export interface RecentPurchaseItem {
+  itemData: RecentPurchaseItemData;
+}
+
+export interface RecentPurchaseResponse {
+  results: RecentPurchaseItem[];
+  count: number;
 }

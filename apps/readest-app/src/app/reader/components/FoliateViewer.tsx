@@ -2,7 +2,6 @@ import clsx from 'clsx';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { convertBlobUrlToDataUrl, BookDoc, getDirection } from '@/libs/document';
-import { BOOK_IDS_SEPARATOR } from '@/services/constants';
 import { BookConfig, PageInfo } from '@/types/book';
 import { FoliateView, wrappedFoliateView } from '@/types/view';
 import { Insets } from '@/types/misc';
@@ -36,6 +35,8 @@ import { applyScrollableStyle, applyTableTouchScroll } from '@/utils/scrollable'
 import { mountAdditionalFonts, mountCustomFont } from '@/styles/fonts';
 import { layoutWarichu, relayoutWarichu } from '@/utils/warichu';
 import { refreshSectionGlosses } from '@/app/reader/utils/wordlensSection';
+import { refreshSectionEntityIcons } from '@/app/reader/utils/entityIcons';
+import { useBookProgress } from '@/store/readerProgressStore';
 import { getBookDirFromLanguage, getBookDirFromWritingMode } from '@/utils/book';
 import { getIndexFromCfi } from '@/utils/cfi';
 import { useUICSS } from '@/hooks/useUICSS';
@@ -102,6 +103,7 @@ const FoliateViewer: React.FC<{
   // Per-field selectors — see store/readerProgressStore.ts header for the
   // "destructure-subscribes-the-whole-store" rationale.
   const getView = useReaderStore((s) => s.getView);
+  const bookKeys = useReaderStore((s) => s.bookKeys);
   const setFoliateView = useReaderStore((s) => s.setView);
   const setViewInited = useReaderStore((s) => s.setViewInited);
   const setProgress = useReaderStore((s) => s.setProgress);
@@ -112,6 +114,10 @@ const FoliateViewer: React.FC<{
   const setViewSettings = useReaderStore((s) => s.setViewSettings);
   const getParallels = useParallelViewStore((s) => s.getParallels);
   const getBookData = useBookDataStore((s) => s.getBookData);
+  // Reactive (unlike `getProgress` above) so the entity-icon re-run effect below
+  // fires as progress changes — see readerProgressStore.ts's header for why
+  // progress lives in its own store rather than on readerStore.
+  const entityIconProgress = useBookProgress(bookKey);
   const { applyBackgroundTexture } = useBackgroundTexture();
   const viewState = getViewState(bookKey);
   const viewSettings = getViewSettings(bookKey);
@@ -186,6 +192,11 @@ const FoliateViewer: React.FC<{
     const detail = event.detail;
     const atEnd = viewRef.current?.renderer.atEnd || false;
     const { current, next, total } = detail.location as PageInfo;
+    // A freshly opened view (e.g. Split View's new pane) can fire an early
+    // relocate before pagination settles, with `current`/`total` not yet
+    // numbers — skip it rather than persist NaN progress; the next relocate
+    // once layout is ready carries valid data.
+    if (!Number.isFinite(current) || !Number.isFinite(total)) return;
     const currentPage = atEnd && total > 0 ? total - 1 : current;
     const pageInfo = { current: currentPage, next, total };
     setProgress(
@@ -477,7 +488,8 @@ const FoliateViewer: React.FC<{
     // Layout/relayout warichu after paginator has set column-width via columnize()
     const contents = viewRef.current?.renderer?.getContents?.() || [];
     const vs = getViewSettings(bookKey);
-    const bookLang = getBookData(bookKey)?.book?.primaryLanguage;
+    const bookData = getBookData(bookKey);
+    const bookLang = bookData?.book?.primaryLanguage;
     // Fixed-layout (pre-paginated) books have no reflow room; injecting ruby
     // would overflow their fixed boxes, so skip Word Lens glosses there.
     const isFixedLayout = bookDoc.rendition?.layout === 'pre-paginated';
@@ -492,6 +504,10 @@ const FoliateViewer: React.FC<{
         }
         if (vs && appService && !isFixedLayout) {
           void refreshSectionGlosses(doc, vs, buildWordLensCtx(bookLang));
+        }
+        if (!isFixedLayout && bookData?.ebookContent) {
+          const progress = getProgress(bookKey);
+          if (progress) refreshSectionEntityIcons(doc, bookData.ebookContent, progress);
         }
       }
     }
@@ -718,12 +734,10 @@ const FoliateViewer: React.FC<{
 
       // If the URL carries ?cfi=... (e.g. opened from a deep link / annotation
       // export link), use it as the initial location instead of the saved one.
-      // Only applies to the primary book — first id in the route's `ids` —
-      // so parallel views don't all jump to the same CFI.
+      // Only applies to the primary book — first entry in bookKeys — so
+      // parallel views don't all jump to the same CFI.
       const cfiParam = searchParams?.get('cfi');
-      const idsParam =
-        searchParams?.get('ids') ?? window.location.pathname.split('/reader/')[1] ?? '';
-      const primaryId = idsParam.split(BOOK_IDS_SEPARATOR).filter(Boolean)[0];
+      const primaryId = bookKeys[0]?.split('-')[0];
       const thisId = bookKey.split('-')[0];
       const overrideLocation = cfiParam && primaryId === thisId ? cfiParam : null;
 
@@ -863,6 +877,22 @@ const FoliateViewer: React.FC<{
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewSettings?.wordLensEnabled, viewSettings?.wordLensLevel, viewSettings?.wordLensHintLang]);
+
+  // Re-run entity-icon gating as reading progress advances — `stabilizedHandler`
+  // only covers a section's first render/reflow, so a newly-eligible entity
+  // (progress just passed its first mention) needs this separate trigger to have
+  // its icon appear without waiting for the next section to (re)stabilize.
+  useEffect(() => {
+    const bookData = getBookData(bookKey);
+    if (!bookData?.ebookContent || !entityIconProgress) return;
+    const isFixedLayout = bookDoc.rendition?.layout === 'pre-paginated';
+    if (isFixedLayout) return;
+    const contents = viewRef.current?.renderer?.getContents?.() || [];
+    for (const { doc } of contents) {
+      if (doc) refreshSectionEntityIcons(doc, bookData.ebookContent, entityIconProgress);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityIconProgress?.fraction, entityIconProgress?.index]);
 
   useEffect(() => {
     const mountCustomFonts = async () => {

@@ -89,10 +89,6 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/reader/:ids',
-        destination: '/reader?ids=:ids',
-      },
-      {
         source: '/o/book/:hash/annotation/:id',
         destination: '/o?book=:hash&note=:id',
       },

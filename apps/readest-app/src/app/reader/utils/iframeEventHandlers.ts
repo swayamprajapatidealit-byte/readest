@@ -388,7 +388,11 @@ export const handleClick = (
     if (
       !media &&
       element?.closest('sup, a, audio, video') &&
-      !element?.closest('a.duokan-footnote:not([href])')
+      !element?.closest('a.duokan-footnote:not([href])') &&
+      // An entity icon spliced next to a name that happens to sit inside an
+      // existing link/superscript (e.g. a cross-reference) must still open its
+      // panel rather than being swallowed by the link/media guard above.
+      !element?.closest('[data-entity-icon]')
     ) {
       return;
     }
@@ -403,6 +407,20 @@ export const handleClick = (
           footnote.getAttribute('alt') ||
           element?.getAttribute('alt') ||
           '',
+      });
+      return;
+    }
+
+    // Entity icons (character/place/glossary): a standalone tap target next to
+    // recognized names, same tier as footnote markers — not inline running text,
+    // so it doesn't need the drag/long-hold gating below.
+    const entityIcon = element?.closest('[data-entity-icon]');
+    if (entityIcon) {
+      eventDispatcher.dispatch('entity-panel-open', {
+        bookKey,
+        element: entityIcon,
+        category: entityIcon.getAttribute('data-entity-category'),
+        entityIndex: Number(entityIcon.getAttribute('data-entity-index')),
       });
       return;
     }

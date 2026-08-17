@@ -796,6 +796,26 @@ const getRubyStyles = (viewSettings: ViewSettings) => {
 `;
 };
 
+// Entity icon (character/place/glossary) marker styling. Sized relative to text
+// so it scales with font size. The icon itself is a single fixed-color SVG shared
+// by every category (see entityIcons.ts), so no per-category color rule is needed.
+const getEntityIconStyles = () => `
+  .entity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.9em;
+    height: 0.9em;
+    margin: 0 0.15em;
+    vertical-align: text-top;
+    cursor: pointer;
+  }
+  .entity-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+`;
+
 export interface ThemeCode {
   bg: string;
   fg: string;
@@ -904,6 +924,7 @@ export const getStyles = (
   );
   const warichuStyles = getWarichuStyles();
   const rubyStyles = getRubyStyles(viewSettings);
+  const entityIconStyles = getEntityIconStyles();
   const userStylesheet = viewSettings.userStylesheet!;
   // The `@namespace` declaration must lead the stylesheet: a `@namespace` rule
   // placed after any style or `@font-face` rule is invalid and silently ignored,
@@ -911,7 +932,7 @@ export const getStyles = (
   // the footnote aside's border show as a stray horizontal line (#4438). Keep it
   // ahead of the inlined custom `@font-face` rules.
   const epubNamespace = `@namespace epub "http://www.idpf.org/2007/ops";`;
-  return `${epubNamespace}\n${customFontFaces}\n${pageLayoutStyles}\n${paragraphLayoutStyles}\n${fontStyles}\n${colorStyles}\n${warichuStyles}\n${rubyStyles}\n${userStylesheet}`;
+  return `${epubNamespace}\n${customFontFaces}\n${pageLayoutStyles}\n${paragraphLayoutStyles}\n${fontStyles}\n${colorStyles}\n${warichuStyles}\n${rubyStyles}\n${entityIconStyles}\n${userStylesheet}`;
 };
 
 // Build a CSS chunk of `@font-face` rules for the given user custom
