@@ -9,7 +9,7 @@ import { useFoliateEvents } from '../hooks/useFoliateEvents';
 import { useCustomFontStore } from '@/store/customFontStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { getFootnoteStyles, getStyles, getThemeCode } from '@/utils/style';
-import { getPopupPosition, getPosition, Position } from '@/utils/sel';
+import { getEntityPanelSide, getPopupPosition, getPosition, Position } from '@/utils/sel';
 import { FootnoteHandler } from 'foliate-js/footnotes.js';
 import { mountAdditionalFonts, mountCustomFont } from '@/styles/fonts';
 import { eventDispatcher } from '@/utils/event';
@@ -250,6 +250,7 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
           bookKey,
           category: 'footnote',
           entityIndex,
+          side: getEntityPanelSide(linkAnchor, bookKey),
         });
         return;
       }

@@ -1,5 +1,6 @@
 import { DOUBLE_CLICK_INTERVAL_THRESHOLD_MS, LONG_HOLD_THRESHOLD } from '@/services/constants';
 import { eventDispatcher } from '@/utils/event';
+import { getEntityPanelSide } from '@/utils/sel';
 import { findGlossWord } from '@/app/reader/utils/wordlensRuby';
 import { TURN_GESTURE_LEFT_INSET_ATTRIBUTE } from './brightnessGesture';
 import {
@@ -418,9 +419,12 @@ export const handleClick = (
     if (entityIcon) {
       eventDispatcher.dispatch('entity-panel-open', {
         bookKey,
-        element: entityIcon,
         category: entityIcon.getAttribute('data-entity-category'),
         entityIndex: Number(entityIcon.getAttribute('data-entity-index')),
+        // Opens the panel on the opposite side so it doesn't cover this icon —
+        // handles both a two-page spread and split/parallel view (see
+        // getEntityPanelSide's doc comment).
+        side: getEntityPanelSide(entityIcon, bookKey),
       });
       return;
     }

@@ -5,6 +5,9 @@ export interface SelectedEntityRef {
   bookKey: string;
   category: EntityCategory;
   entityIndex: number;
+  // Which side of its pane the clicked icon/marker was on — the panel itself
+  // renders on the opposite side (see EntityPanel.tsx) so it doesn't cover it.
+  side: 'left' | 'right';
 }
 
 interface EntityPanelState {

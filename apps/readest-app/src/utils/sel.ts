@@ -125,6 +125,29 @@ export const getRangeRectInWebview = (range: Range): Rect | null => {
 };
 
 /**
+ * Which physical half of the clicked element's book pane (`#gridcell-<bookKey>`)
+ * it falls in — used to open the entity/footnote info panel on the side
+ * OPPOSITE the tap so it doesn't cover the content just tapped. Works
+ * uniformly for a two-column/spread layout within one book and for split/
+ * parallel view across panes: either way the element's outer-webview
+ * position naturally falls in the left or right half of its own pane.
+ * Falls back to 'right' when the range/pane can't be resolved (e.g. a
+ * collapsed or detached element) — the pre-existing fixed panel side.
+ */
+export const getEntityPanelSide = (element: Element, bookKey: string): 'left' | 'right' => {
+  const range = element.ownerDocument.createRange();
+  range.selectNode(element);
+  const rect = getRangeRectInWebview(range);
+  if (!rect) return 'right';
+  const gridCellRect = document.querySelector(`#gridcell-${bookKey}`)?.getBoundingClientRect();
+  const containerLeft = gridCellRect?.left ?? 0;
+  const containerRight = gridCellRect?.right ?? window.innerWidth;
+  const elementCenter = (rect.left + rect.right) / 2;
+  const containerCenter = (containerLeft + containerRight) / 2;
+  return elementCenter < containerCenter ? 'left' : 'right';
+};
+
+/**
  * Sample the visual style (font size / family / color) of the text
  * underneath a {@link Range}. Used by the macOS system-dictionary
  * bridge so the inline HUD label matches the original paragraph's

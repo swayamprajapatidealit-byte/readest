@@ -30,7 +30,8 @@ const isSelectedEntityRef = (detail: unknown): detail is SelectedEntityRef => {
       value.category === 'place' ||
       value.category === 'glossary' ||
       value.category === 'footnote') &&
-    typeof value.entityIndex === 'number'
+    typeof value.entityIndex === 'number' &&
+    (value.side === 'left' || value.side === 'right')
   );
 };
 
@@ -80,8 +81,16 @@ const EntityPanel: React.FC = () => {
   const handleClose = () => setEntityPanelVisible(false);
   useShortcuts({ onEscape: handleClose }, [handleClose]);
 
+  // Opens opposite the icon/marker that was clicked (see getEntityPanelSide,
+  // utils/sel.ts) so the panel doesn't cover it — falls back to 'right' (the
+  // pre-existing fixed side) before any entity has been selected yet.
+  const panelSide: 'left' | 'right' = selectedEntityRef?.side === 'left' ? 'right' : 'left';
+
+  // Document direction is always ltr in this app (no live RTL layout flip —
+  // see store/themeStore.ts's theme handling), so 'start'/'end' map directly
+  // to physical left/right here.
   const { handleResizeStart, handleResizeKeyDown } = usePanelResize({
-    side: 'end',
+    side: panelSide === 'right' ? 'end' : 'start',
     minWidth: MIN_ENTITY_PANEL_WIDTH,
     maxWidth: MAX_ENTITY_PANEL_WIDTH,
     getWidth: () => entityPanelWidth,
@@ -96,37 +105,31 @@ const EntityPanel: React.FC = () => {
   if (!ebookContent) return null;
 
   const progressFraction = progress?.fraction ?? 0;
-  const resolved = (() => {
+  const content = (() => {
     switch (category) {
       case 'character': {
         const entity = ebookContent.characters[entityIndex];
         if (!entity) return null;
-        return {
-          title: entity.name,
-          content: <CharacterContent entity={entity} progressFraction={progressFraction} />,
-        };
+        return <CharacterContent entity={entity} progressFraction={progressFraction} />;
       }
       case 'place': {
         const entity = ebookContent.places[entityIndex];
         if (!entity) return null;
-        return {
-          title: entity.name,
-          content: <PlaceContent entity={entity} progressFraction={progressFraction} />,
-        };
+        return <PlaceContent entity={entity} progressFraction={progressFraction} />;
       }
       case 'glossary': {
         const entity = ebookContent.glossary[entityIndex];
         if (!entity) return null;
-        return { title: entity.term, content: <GlossaryContent entity={entity} /> };
+        return <GlossaryContent entity={entity} />;
       }
       case 'footnote': {
         const entity = ebookContent.footnotes[entityIndex];
         if (!entity) return null;
-        return { title: entity.source_label, content: <FootnoteContent entity={entity} /> };
+        return <FootnoteContent entity={entity} />;
       }
     }
   })();
-  if (!resolved) return null;
+  if (!content) return null;
 
   const viewSettings = getViewSettings(bookKey);
   const languageDir = getBookDirFromLanguage(bookData?.book?.primaryLanguage);
@@ -141,11 +144,19 @@ const EntityPanel: React.FC = () => {
       )}
       <div
         className={clsx(
-          'entity-panel-container right-0 flex min-w-60 select-none flex-col',
-          'full-height font-sans text-base font-normal sm:text-sm',
+          'entity-panel-container flex min-w-60 select-none flex-col',
+          panelSide === 'right' ? 'right-0' : 'left-0',
+          'full-height font-sans text-base font-normal',
           viewSettings?.isEink ? 'bg-base-100' : 'bg-base-200',
           isEntityPanelPinned ? 'z-20' : 'z-[45] shadow-2xl',
-          !isEntityPanelPinned && viewSettings?.isEink && 'border-base-content border-s',
+          // Explicit physical border (not logical border-s/border-e) — the
+          // panel's screen side is independent of the book's own text
+          // direction, which is what `dir` below governs instead.
+          !isEntityPanelPinned &&
+            viewSettings?.isEink &&
+            (panelSide === 'right'
+              ? 'border-base-content border-l'
+              : 'border-base-content border-r'),
         )}
         role='group'
         aria-label={_('Entity Info')}
@@ -165,7 +176,8 @@ const EntityPanel: React.FC = () => {
       >
         <div
           className={clsx(
-            'drag-bar absolute -left-2 top-0 h-full w-0.5 cursor-col-resize bg-transparent p-2',
+            'drag-bar absolute top-0 h-full w-0.5 cursor-col-resize bg-transparent p-2',
+            panelSide === 'right' ? '-left-2' : '-right-2',
             isMobile && 'hidden',
           )}
           role='slider'
@@ -178,13 +190,11 @@ const EntityPanel: React.FC = () => {
           onKeyDown={handleResizeKeyDown}
         />
         <EntityPanelHeader
-          title={resolved.title}
-          category={category}
           isPinned={isEntityPanelPinned}
           handleClose={handleClose}
           handleTogglePin={toggleEntityPanelPin}
         />
-        <div className='flex-grow overflow-y-auto px-4 py-2'>{resolved.content}</div>
+        <div className='flex-grow overflow-y-auto px-4 py-2'>{content}</div>
       </div>
     </>
   );
