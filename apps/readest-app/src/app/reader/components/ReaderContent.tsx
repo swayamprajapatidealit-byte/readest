@@ -168,11 +168,6 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     await saveSettings(envConfig, settings);
   }, 200);
 
-  const handleCloseBooksToHome = async () => {
-    handleCloseBooks(true);
-    navigateBackToHome();
-  };
-
   const handleCloseBook = async (bookKey: string) => {
     // Header X / pane close: an SPA-side close on web and the main window.
     // The Tauri reader-window branches below destroy their webview, which
@@ -205,11 +200,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
   return (
     <div className='reader-content full-height flex'>
       <SideBar />
-      <BooksGrid
-        bookKeys={bookKeys}
-        onCloseBook={handleCloseBook}
-        onGoToHome={handleCloseBooksToHome}
-      />
+      <BooksGrid bookKeys={bookKeys} onCloseBook={handleCloseBook} />
       {isSettingsDialogOpen && <SettingsDialog bookKey={settingsDialogBookKey} />}
       <Notebook />
       <EntityPanel />

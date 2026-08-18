@@ -32,7 +32,7 @@ interface HeaderBarProps {
   isHoveredAnim: boolean;
   gridInsets: Insets;
   screenInsets: Insets;
-  onGoToHome: () => void;
+  onCloseBook: (bookKey: string) => void;
   onDropdownOpenChange?: (isOpen: boolean) => void;
 }
 
@@ -42,7 +42,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   isHoveredAnim,
   gridInsets,
   screenInsets,
-  onGoToHome,
+  onCloseBook,
   onDropdownOpenChange,
 }) => {
   const _ = useTranslation();
@@ -54,6 +54,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   const { isDarkMode, systemUIVisible, statusBarHeight } = useThemeStore();
   const { getView, getViewSettings, setHoveredBookKey } = useReaderStore();
   const viewSettings = getViewSettings(bookKey);
+  const bookKeys = useReaderStore((s) => s.bookKeys);
+  const isPrimary = useReaderStore((s) => s.viewStates[bookKey]?.isPrimary ?? true);
+  // Multiple panes open (split view / parallel read): the primary pane keeps
+  // its progress, so it can't be closed away individually while a secondary
+  // pane is still open — only secondary panes get a close button then. A
+  // single open book (always primary) is unaffected and keeps its button.
+  const isSplitView = bookKeys.length > 1;
+  const showCloseButton = !isSplitView || !isPrimary;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [headerWidth, setHeaderWidth] = useState(0);
@@ -197,13 +205,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                 <SidebarToggler bookKey={bookKey} />
               </div>
             )}
-            <button
-              title={_('Close Book')}
-              className='btn btn-ghost hidden h-8 min-h-8 w-8 p-0 sm:flex'
-              onClick={onGoToHome}
-            >
-              <VscClose size={iconSize18} className='fill-base-content' />
-            </button>
+            {showCloseButton && (
+              <button
+                title={_('Close Book')}
+                className='btn btn-ghost hidden h-8 min-h-8 w-8 p-0 sm:flex'
+                onClick={() => onCloseBook(bookKey)}
+              >
+                <VscClose size={iconSize18} className='fill-base-content' />
+              </button>
+            )}
             <BookmarkToggler bookKey={bookKey} />
           </div>
           {enableAnnotationQuickActions && (
@@ -254,9 +264,17 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         >
           <div
             aria-hidden='true'
-            className={clsx('line-clamp-1 text-center text-xs font-semibold', 'max-w-[50%]')}
+            className={clsx(
+              'flex max-w-[50%] items-center justify-center gap-x-1.5',
+              'line-clamp-1 text-center text-xs font-semibold',
+            )}
           >
-            {bookTitle}
+            {isSplitView && (
+              <span className='badge badge-sm shrink-0'>
+                {isPrimary ? _('Primary') : _('Secondary')}
+              </span>
+            )}
+            <span className='line-clamp-1'>{bookTitle}</span>
           </div>
         </div>
 
