@@ -66,8 +66,15 @@ interface ReaderStore {
      lives here rather than in FooterBar state so the TTS mini player can
      stack above the expanded panel. Persists across bar hide/show. */
   bottomBarTab: string;
+  // Overrides BooksGrid's default even 2-pane split (see utils/grid.ts) with a
+  // fraction (0-1) for the FIRST pane, only when opening a Ctrl/Cmd+Click
+  // split view would otherwise shrink the main pane's column below its
+  // current width. `null` means "use the default even split" — the untouched
+  // behavior for the existing manual Split View / Parallel Read features.
+  splitMainPaneFraction: number | null;
   setBookKeys: (keys: string[]) => void;
   setHoveredBookKey: (key: string | null) => void;
+  setSplitMainPaneFraction: (fraction: number | null) => void;
   setBottomBarTab: (tab: string) => void;
   setBookmarkRibbonVisibility: (key: string, visible: boolean) => void;
   setTTSEnabled: (key: string, enabled: boolean) => void;
@@ -113,8 +120,10 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
   bookKeys: [],
   hoveredBookKey: null,
   bottomBarTab: '',
+  splitMainPaneFraction: null,
   setBookKeys: (keys: string[]) => set({ bookKeys: keys }),
   setHoveredBookKey: (key: string | null) => set({ hoveredBookKey: key }),
+  setSplitMainPaneFraction: (fraction: number | null) => set({ splitMainPaneFraction: fraction }),
   setBottomBarTab: (tab: string) => set({ bottomBarTab: tab }),
   getView: (key: string | null) => (key && get().viewStates[key]?.view) || null,
   setView: (key: string, view) =>

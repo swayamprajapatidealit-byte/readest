@@ -30,8 +30,9 @@ const useBooksManager = () => {
     eventDispatcher.dispatch('toast', { message: _('Unable to open book'), type: 'error' });
   };
 
-  // Append a new book and sync with bookKeys
-  const appendBook = (id: string, isPrimary: boolean, isParallel: boolean) => {
+  // Append a new book and sync with bookKeys. Returns the generated key so
+  // callers can target this exact pane afterward (e.g. goToCfiWhenReady).
+  const appendBook = (id: string, isPrimary: boolean, isParallel: boolean): string => {
     const newKey = `${id}-${uniqueId()}`;
     initViewState(envConfig, id, newKey, isPrimary).catch(handleOpenError);
     if (!bookKeys.includes(newKey)) {
@@ -40,6 +41,7 @@ const useBooksManager = () => {
     }
     if (isParallel) setParallel([sideBarBookKey!, newKey]);
     setSideBarBookKey(newKey);
+    return newKey;
   };
 
   // Jump the switched-in book to a deep-link cfi (#4887) once its view has
@@ -144,6 +146,11 @@ const useBooksManager = () => {
   // Close a book and sync with bookKeys
   const dismissBook = (bookKey: string) => {
     const updatedKeys = bookKeys.filter((key) => key !== bookKey);
+    // Don't let a Ctrl/Cmd+Click split-view ratio outlive its own 2-pane
+    // session and leak into some later, unrelated 2-pane layout.
+    if (updatedKeys.length !== 2) {
+      useReaderStore.getState().setSplitMainPaneFraction(null);
+    }
     setBookKeys(updatedKeys);
   };
 
@@ -164,6 +171,7 @@ const useBooksManager = () => {
     dismissBook,
     getNextBookKey,
     openParallelView,
+    goToCfiWhenReady,
   };
 };
 

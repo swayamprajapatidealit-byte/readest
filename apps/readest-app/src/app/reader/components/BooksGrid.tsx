@@ -273,13 +273,20 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onGoToHome }) => {
   // setGridInsets is a stable action ref.
   const hoveredBookKey = useReaderStore((s) => s.hoveredBookKey);
   const setGridInsets = useReaderStore((s) => s.setGridInsets);
+  const splitMainPaneFraction = useReaderStore((s) => s.splitMainPaneFraction);
   const getBookData = useBookDataStore((s) => s.getBookData);
   const sideBarBookKey = useSidebarStore((s) => s.sideBarBookKey);
   const [dropdownOpenBook, setDropdownOpenBook] = useState<string>('');
 
   const { safeAreaInsets: screenInsets } = useThemeStore();
   const aspectRatio = window.innerWidth / window.innerHeight;
-  const gridTemplate = getGridTemplate(bookKeys.length, aspectRatio);
+  // Only meaningful for exactly 2 panes — a stale value left over from a
+  // closed split view is otherwise harmless since it's never read here.
+  const gridTemplate = getGridTemplate(
+    bookKeys.length,
+    aspectRatio,
+    bookKeys.length === 2 ? splitMainPaneFraction : null,
+  );
 
   useEffect(() => {
     if (!sideBarBookKey) return;

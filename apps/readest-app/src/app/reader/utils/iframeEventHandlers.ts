@@ -171,11 +171,38 @@ const consumeSuppressedDomClick = (bookKey: string, event: MouseEvent, now: numb
   return false;
 };
 
+// Whether the most recent click in a book was Ctrl/Cmd-held — read by
+// FootnotePopup.tsx's docLinkHandler (Foliate's `'link'` event, dispatched
+// synchronously from the bubble-phase listener this capture-phase handler
+// runs before) to open a link's destination in a split pane instead of
+// navigating in place. Overwritten on every click (not just set-when-true) so
+// a click that never turns into a `'link'` event (e.g. Ctrl+clicking plain
+// text) can't leave a stale flag for a later, unrelated link click to pick up.
+const pendingLinkCtrlClick = new Map<string, boolean>();
+
+export const markLinkCtrlClick = (bookKey: string, active: boolean): void => {
+  if (active) pendingLinkCtrlClick.set(bookKey, true);
+  else pendingLinkCtrlClick.delete(bookKey);
+};
+
+export const consumeLinkCtrlClick = (bookKey: string): boolean => {
+  const was = pendingLinkCtrlClick.get(bookKey) ?? false;
+  pendingLinkCtrlClick.delete(bookKey);
+  return was;
+};
+
 // Runs before Foliate's bubble-phase link handler. Only recognized swipes are
 // intercepted here; ordinary clicks retain their existing listener order and
 // link/media/footnote behavior.
 export const handleClickCapture = (bookKey: string, event: MouseEvent) => {
-  consumeSuppressedDomClick(bookKey, event, Date.now());
+  const suppressed = consumeSuppressedDomClick(bookKey, event, Date.now());
+  if (suppressed) return;
+  const target = event.target as HTMLElement | null;
+  // Entity icons (character/place/glossary) can end up spliced inside a real
+  // `<a>` when the matched name is also link text — exclude those so a
+  // Ctrl+click on the icon still opens its panel rather than a split pane.
+  const isEntityIconClick = !!target?.closest('[data-entity-icon]');
+  markLinkCtrlClick(bookKey, (event.ctrlKey || event.metaKey) && !isEntityIconClick);
 };
 
 let keyboardState = {

@@ -9,11 +9,14 @@ import { useFoliateEvents } from '../hooks/useFoliateEvents';
 import { useCustomFontStore } from '@/store/customFontStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { getFootnoteStyles, getStyles, getThemeCode } from '@/utils/style';
+import { getSplitMainPaneFraction } from '@/utils/config';
 import { getEntityPanelSide, getPopupPosition, getPosition, Position } from '@/utils/sel';
 import { FootnoteHandler } from 'foliate-js/footnotes.js';
 import { mountAdditionalFonts, mountCustomFont } from '@/styles/fonts';
 import { eventDispatcher } from '@/utils/event';
+import { consumeLinkCtrlClick } from '../utils/iframeEventHandlers';
 import { shouldCheckAsFootnote } from '../utils/footnoteHeuristics';
+import useBooksManager from '../hooks/useBooksManager';
 import { FoliateView } from '@/types/view';
 import { isCJKLang } from '@/utils/lang';
 import { Overlay } from '@/components/Overlay';
@@ -38,6 +41,7 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
   const { getBookData } = useBookDataStore();
   const { getView, getViewSettings } = useReaderStore();
   const { getLoadedFonts } = useCustomFontStore();
+  const { appendBook, goToCfiWhenReady, bookKeys } = useBooksManager();
   const view = getView(bookKey);
   const viewSettings = getViewSettings(bookKey)!;
   const [footnoteHandler] = useState(() => new FootnoteHandler());
@@ -245,6 +249,9 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
         (footnote) => footnote.source_location.anchor_id === anchorId,
       );
       if (entityIndex !== undefined && entityIndex !== -1) {
+        // Footnotes are excluded from Ctrl/Cmd+Click split-view (see below) —
+        // discard any pending flag so it can't leak into a later, unrelated click.
+        consumeLinkCtrlClick(bookKey);
         event.preventDefault();
         eventDispatcher.dispatch('entity-panel-open', {
           bookKey,
@@ -256,22 +263,43 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
       }
     }
 
+    // Ctrl/Cmd+Click on a non-footnote internal link opens its destination in
+    // a new split pane of this same book instead of navigating in place.
+    // Footnotes (native/vendor-format, detected the same way the fallback
+    // below does) are excluded — they keep their existing single-click-only
+    // popup/panel behavior regardless of modifier keys.
+    const footnoteClasses = ['duokan-footnote', 'footnote-link', 'footnote'];
+    const looksLikeFootnote =
+      footnoteClasses.some((cls) => linkAnchor.classList.contains(cls)) ||
+      shouldCheckAsFootnote(linkAnchor);
+    if (consumeLinkCtrlClick(bookKey) && !looksLikeFootnote) {
+      event.preventDefault();
+      // Keep the main pane's reflowable column from shrinking when this is
+      // the first pane opening a split — an even 50/50 is fine (and left
+      // alone) whenever it wouldn't force the main pane narrower than its
+      // current column width (see getSplitMainPaneFraction).
+      if (bookKeys.length === 1) {
+        useReaderStore.getState().setSplitMainPaneFraction(getSplitMainPaneFraction(viewSettings));
+      }
+      const bookHash = bookKey.split('-')[0]!;
+      const newKey = appendBook(bookHash, false, false);
+      goToCfiWhenReady(newKey, detail.href);
+      return;
+    }
+
     // console.log('doc link click', detail);
     const gridFrame = document.querySelector(`#gridcell-${bookKey}`);
     if (!gridFrame) return;
     const rect = gridFrame.getBoundingClientRect();
-    const viewSettings = getViewSettings(bookKey)!;
     const triangPos = getPosition(detail.a, rect, popupPadding, viewSettings.vertical);
     setGridRect(rect);
     setTrianglePosition(triangPos);
     trianglePositionRef.current = triangPos;
 
-    const { a: anchor } = detail as { a: HTMLAnchorElement };
-    const footnoteClasses = ['duokan-footnote', 'footnote-link', 'footnote'];
-    if (footnoteClasses.some((cls) => anchor.classList.contains(cls))) {
+    if (footnoteClasses.some((cls) => linkAnchor.classList.contains(cls))) {
       detail['follow'] = true;
     }
-    if (shouldCheckAsFootnote(anchor)) {
+    if (shouldCheckAsFootnote(linkAnchor)) {
       detail['check'] = true;
     }
     historyRef.current = { items: [detail], index: 0 };

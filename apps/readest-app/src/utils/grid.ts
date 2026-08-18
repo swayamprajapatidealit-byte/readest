@@ -1,10 +1,23 @@
-export const getGridTemplate = (count: number, aspectRatio: number) => {
+// `mainPaneFraction`, when set, overrides the default even 2-pane split with
+// a custom ratio for the FIRST pane — used by the Ctrl/Cmd+Click split-view
+// feature to keep the main pane's reflowable column from shrinking (see
+// getSplitMainPaneFraction, utils/config.ts). Only applies to the 2-book,
+// landscape case; every other layout (portrait stack, 3+ panes) is untouched.
+export const getGridTemplate = (
+  count: number,
+  aspectRatio: number,
+  mainPaneFraction?: number | null,
+) => {
   if (count <= 1) {
     return { columns: '1fr', rows: '1fr' };
   } else if (count === 2) {
-    return aspectRatio < 1
-      ? { columns: '1fr', rows: '1fr 1fr' }
-      : { columns: '1fr 1fr', rows: '1fr' };
+    if (aspectRatio < 1) {
+      return { columns: '1fr', rows: '1fr 1fr' };
+    }
+    if (mainPaneFraction) {
+      return { columns: `${mainPaneFraction}fr ${1 - mainPaneFraction}fr`, rows: '1fr' };
+    }
+    return { columns: '1fr 1fr', rows: '1fr' };
   } else if (count === 3 || count === 4) {
     return { columns: '1fr 1fr', rows: '1fr 1fr' };
   } else {
