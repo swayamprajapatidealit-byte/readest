@@ -911,13 +911,11 @@ const FoliateViewer: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityIconProgress?.fraction, entityIconProgress?.index]);
 
-  // The panel marks facts "seen" without progress moving at all (e.g. opening
-  // it and immediately closing it) — that can flip an entity's icon from
-  // shown to suppressed, but neither trigger above would otherwise re-run for
-  // an unchanged progress value, and the fingerprint cache would skip it even
-  // if one did. Force a refresh specifically for that case.
+  // The "Entity Icons" per-category toggle (ViewMenu.tsx) needs to take
+  // effect immediately rather than waiting for the next natural page-turn/
+  // scroll trigger, so force past the fingerprint cache for this one.
   useEffect(() => {
-    const handleEntitySeenChanged = (event: CustomEvent<{ bookKey: string }>) => {
+    const handleEntityIconSettingsChanged = (event: CustomEvent<{ bookKey: string }>) => {
       if (event.detail.bookKey !== bookKey) return;
       const bookData = getBookData(bookKey);
       const progress = getProgress(bookKey);
@@ -930,8 +928,9 @@ const FoliateViewer: React.FC<{
           refreshSectionEntityIcons(doc, bookData.ebookContent, progress, bookKey, isBack, true);
       }
     };
-    eventDispatcher.on('entity-seen-changed', handleEntitySeenChanged);
-    return () => eventDispatcher.off('entity-seen-changed', handleEntitySeenChanged);
+    eventDispatcher.on('entity-icon-settings-changed', handleEntityIconSettingsChanged);
+    return () =>
+      eventDispatcher.off('entity-icon-settings-changed', handleEntityIconSettingsChanged);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookKey]);
 

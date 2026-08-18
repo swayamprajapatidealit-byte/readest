@@ -322,6 +322,10 @@ export interface ViewConfig {
   readingRulerPosition: number;
   readingRulerOpacity: number;
   readingRulerColor: ReadingRulerColor;
+
+  entityIconsCharactersEnabled: boolean;
+  entityIconsPlacesEnabled: boolean;
+  entityIconsGlossaryEnabled: boolean;
 }
 
 export interface TTSConfig {

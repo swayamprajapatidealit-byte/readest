@@ -82,7 +82,11 @@ const EntityPanel: React.FC = () => {
 
   // Marks the entity's currently-visible facts as seen so its icon can
   // suppress once opened, and re-fires as progress advances while the panel
-  // stays open (e.g. pinned across page turns) to pick up newly-unlocked facts.
+  // stays open (e.g. pinned across page turns) to pick up newly-unlocked
+  // facts. Deliberately doesn't force an icon refresh here — the icon should
+  // stay put through the viewing that just opened it, and only disappear the
+  // next time this entity is revisited (progress moves, a page turn
+  // reflows the section, etc.) and finds nothing unseen left.
   useEffect(() => {
     if (!isEntityPanelVisible || !selectedEntityRef) return;
     const { bookKey, category, entityIndex } = selectedEntityRef;
@@ -95,17 +99,7 @@ const EntityPanel: React.FC = () => {
     if (visibleIds.length === 0) return;
     const bookId = bookKey.split('-')[0]!;
     const entityKey = `${category}:${entityIndex}`;
-    const changed = markEntityInfoSeen(
-      bookId,
-      entityKey,
-      visibleIds,
-      progress?.index ?? 0,
-      entityKey,
-    );
-    // The icon's suppression state can flip without progress moving at all
-    // (e.g. open the panel, then close it) — nothing else would re-run the
-    // icon refresh for an unchanged progress value, so ask for one directly.
-    if (changed) eventDispatcher.dispatch('entity-seen-changed', { bookKey });
+    markEntityInfoSeen(bookId, entityKey, visibleIds, progress?.index ?? 0, entityKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEntityPanelVisible, selectedEntityRef, progress]);
 

@@ -280,6 +280,10 @@ export const DEFAULT_VIEW_CONFIG: ViewConfig = {
   readingRulerPosition: 33,
   readingRulerOpacity: 0.5,
   readingRulerColor: 'transparent',
+
+  entityIconsCharactersEnabled: true,
+  entityIconsPlacesEnabled: true,
+  entityIconsGlossaryEnabled: true,
 };
 
 export const DEFAULT_TTS_CONFIG: TTSConfig = {

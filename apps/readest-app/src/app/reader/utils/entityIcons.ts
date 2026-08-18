@@ -1,5 +1,6 @@
 import type { EbookContent } from '@/services/visualible/ebookContent';
 import type { EntityAnchor } from '@/services/visualible/entityTypes';
+import { useReaderStore } from '@/store/readerStore';
 import { getEntityViewMemory, offerEntityFacts } from '@/store/entityViewMemoryStore';
 import {
   buildEntityMatcher,
@@ -64,6 +65,21 @@ const isEligible = (anchor: EntityAnchor | undefined, progress: EntityProgress):
   return progress.fraction + PROGRESS_EPSILON >= anchor.global_progress;
 };
 
+// Per-category on/off switch, set from the "Entity Icons" submenu (ViewMenu.tsx).
+const isCategoryEnabled = (bookKey: string, category: EntityCategory): boolean => {
+  const viewSettings = useReaderStore.getState().getViewSettings(bookKey);
+  switch (category) {
+    case 'character':
+      return viewSettings?.entityIconsCharactersEnabled ?? true;
+    case 'place':
+      return viewSettings?.entityIconsPlacesEnabled ?? true;
+    case 'glossary':
+      return viewSettings?.entityIconsGlossaryEnabled ?? true;
+    default:
+      return true;
+  }
+};
+
 const createIconMarker = (
   doc: Document,
   category: EntityCategory,
@@ -108,9 +124,9 @@ const lastRefreshFingerprint = new WeakMap<Document, string>();
  * footnote-reference markers as the click target instead (see iframeEventHandlers.ts).
  *
  * `force` bypasses the fingerprint cache for a pass triggered by something
- * other than a progress/layout change — e.g. the entity panel just marked a
- * fact seen, which can flip an icon's suppression state without progress
- * moving at all (see the 'entity-seen-changed' listener in FoliateViewer.tsx).
+ * other than a progress/layout change — currently only the "Entity Icons"
+ * per-category on/off toggle (ViewMenu.tsx), which must take effect right
+ * away rather than waiting for the next natural page-turn/scroll trigger.
  */
 export const refreshSectionEntityIcons = (
   doc: Document,
@@ -158,6 +174,8 @@ export const refreshSectionEntityIcons = (
     const sorted = primaryMatches.sort((a, b) => b.start - a.start);
 
     for (const match of sorted) {
+      if (!isCategoryEnabled(bookKey, match.category)) continue;
+
       const anchor = getAnchor(content, match.category, match.entityIndex);
       if (!isEligible(anchor, progress)) continue;
 

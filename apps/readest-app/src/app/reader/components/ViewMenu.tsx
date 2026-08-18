@@ -66,6 +66,15 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
   const [invertImgColorInDark, setInvertImgColorInDark] = useState(
     viewSettings!.invertImgColorInDark,
   );
+  const [entityIconsCharactersEnabled, setEntityIconsCharactersEnabled] = useState(
+    viewSettings!.entityIconsCharactersEnabled ?? true,
+  );
+  const [entityIconsPlacesEnabled, setEntityIconsPlacesEnabled] = useState(
+    viewSettings!.entityIconsPlacesEnabled ?? true,
+  );
+  const [entityIconsGlossaryEnabled, setEntityIconsGlossaryEnabled] = useState(
+    viewSettings!.entityIconsGlossaryEnabled ?? true,
+  );
   const zoomIn = () => setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM_LEVEL));
   const zoomOut = () => setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM_LEVEL));
   const resetZoom = () => setZoomLevel(100);
@@ -170,6 +179,48 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
     saveViewSettings(envConfig, bookKey, 'invertImgColorInDark', invertImgColorInDark, true, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invertImgColorInDark]);
+
+  useEffect(() => {
+    if (entityIconsCharactersEnabled === viewSettings.entityIconsCharactersEnabled) return;
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'entityIconsCharactersEnabled',
+      entityIconsCharactersEnabled,
+      false,
+      false,
+    );
+    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityIconsCharactersEnabled]);
+
+  useEffect(() => {
+    if (entityIconsPlacesEnabled === viewSettings.entityIconsPlacesEnabled) return;
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'entityIconsPlacesEnabled',
+      entityIconsPlacesEnabled,
+      false,
+      false,
+    );
+    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityIconsPlacesEnabled]);
+
+  useEffect(() => {
+    if (entityIconsGlossaryEnabled === viewSettings.entityIconsGlossaryEnabled) return;
+    saveViewSettings(
+      envConfig,
+      bookKey,
+      'entityIconsGlossaryEnabled',
+      entityIconsGlossaryEnabled,
+      false,
+      false,
+    );
+    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityIconsGlossaryEnabled]);
 
   useEffect(() => {
     if (zoomMode === viewSettings.zoomMode) return;
@@ -430,6 +481,28 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
         Icon={invertImgColorInDark ? MdCheck : undefined}
         onClick={() => setInvertImgColorInDark(!invertImgColorInDark)}
       />
+
+      <hr aria-hidden='true' className='border-base-300 my-1' />
+
+      <MenuItem label={_('Entity Icons')}>
+        <ul className='max-h-60 overflow-y-auto'>
+          <MenuItem
+            label={_('Characters')}
+            toggled={entityIconsCharactersEnabled}
+            onClick={() => setEntityIconsCharactersEnabled(!entityIconsCharactersEnabled)}
+          />
+          <MenuItem
+            label={_('Places')}
+            toggled={entityIconsPlacesEnabled}
+            onClick={() => setEntityIconsPlacesEnabled(!entityIconsPlacesEnabled)}
+          />
+          <MenuItem
+            label={_('Glossary')}
+            toggled={entityIconsGlossaryEnabled}
+            onClick={() => setEntityIconsGlossaryEnabled(!entityIconsGlossaryEnabled)}
+          />
+        </ul>
+      </MenuItem>
     </Menu>
   );
 };

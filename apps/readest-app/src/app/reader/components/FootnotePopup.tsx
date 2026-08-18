@@ -5,6 +5,7 @@ import { MdArrowBack } from 'react-icons/md';
 import { BookDoc } from '@/libs/document';
 import { useReaderStore } from '@/store/readerStore';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useSidebarStore } from '@/store/sidebarStore';
 import { useFoliateEvents } from '../hooks/useFoliateEvents';
 import { useCustomFontStore } from '@/store/customFontStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
@@ -38,7 +39,7 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
   const [popupPosition, setPopupPosition] = useState<Position | null>();
   const [showPopup, setShowPopup] = useState(false);
 
-  const { getBookData } = useBookDataStore();
+  const { getBookData, getConfig } = useBookDataStore();
   const { getView, getViewSettings } = useReaderStore();
   const { getLoadedFonts } = useCustomFontStore();
   const { appendBook, goToCfiWhenReady, bookKeys } = useBooksManager();
@@ -274,6 +275,16 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
       shouldCheckAsFootnote(linkAnchor);
     if (consumeLinkCtrlClick(bookKey) && !looksLikeFootnote) {
       event.preventDefault();
+      // Close the TOC first — it would otherwise sit open on top of/next to
+      // the freshly-created split pane. Only the TOC tab is in scope here;
+      // an open Annotations/Bookmarks tab is left alone.
+      const sidebar = useSidebarStore.getState();
+      if (
+        sidebar.isSideBarVisible &&
+        (getConfig(bookKey)?.viewSettings?.sideBarTab ?? 'toc') === 'toc'
+      ) {
+        sidebar.setSideBarVisible(false);
+      }
       // Keep the main pane's reflowable column from shrinking when this is
       // the first pane opening a split — an even 50/50 is fine (and left
       // alone) whenever it wouldn't force the main pane narrower than its

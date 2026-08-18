@@ -87,21 +87,14 @@ export const offerEntityFacts = (
   });
 };
 
-/**
- * Records that the reader actually opened the panel and saw these facts.
- * Returns whether anything actually changed, so a caller that needs to
- * force a dependent icon refresh (see EntityPanel.tsx) doesn't do so on
- * every redundant call — e.g. while the panel stays open across minor
- * progress ticks that unlock nothing new.
- */
+/** Records that the reader actually opened the panel and saw these facts. */
 export const markEntityInfoSeen = (
   bookId: string,
   entityKey: string,
   infoIds: string[],
   chapter: number,
   occurrenceKey: string,
-): boolean => {
-  let changed = false;
+): void => {
   useEntityViewMemoryStore.setState((state) => {
     const existing = state.entityViewMemory[bookId]?.[entityKey] ?? EMPTY_MEMORY;
     const seenInfo = Array.from(new Set([...existing.seenInfo, ...infoIds]));
@@ -118,7 +111,6 @@ export const markEntityInfoSeen = (
       return state;
     }
 
-    changed = true;
     return {
       entityViewMemory: {
         ...state.entityViewMemory,
@@ -135,7 +127,6 @@ export const markEntityInfoSeen = (
       },
     };
   });
-  return changed;
 };
 
 /** Drop a book's entity memory — call when the book's data is unloaded. */
