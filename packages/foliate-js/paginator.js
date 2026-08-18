@@ -1971,6 +1971,14 @@ export class Paginator extends HTMLElement {
         if (this.#views.size === 0) return
         const primaryView = this.#primaryView
         if (!primaryView) return
+        // The scroll listener that keeps #anchor current is debounced up to
+        // ~250ms (see #flushScrolledState's other call site in setAttribute),
+        // so a resize landing inside that window — e.g. opening a split pane
+        // right after scrolling to a link — would otherwise restore a stale
+        // anchor below and scroll the reader away from where they were.
+        // Flush it here, against the pre-resize layout, before that layout
+        // is replaced.
+        this.#flushScrolledState()
         this.#stabilizing = true
         const layout = this.#beforeRender({
             vertical: this.#vertical,
