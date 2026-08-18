@@ -134,6 +134,17 @@ const FoliateViewer: React.FC<{
   const [scrollMargins, setScrollMargins] = useState({ top: 0, bottom: 0 });
   const docLoaded = useRef(false);
 
+  // High-water mark of reading progress for this viewer instance — used only to
+  // tell forward reading from back-navigation for entity-icon occurrence replay
+  // (entityIcons.ts's `selectPrimaryMatch` `preferredOffset`). Never reset on a
+  // backward move.
+  const maxProgressAchievedRef = useRef(0);
+  const isBackNavigation = useCallback((fraction: number): boolean => {
+    const isBack = fraction < maxProgressAchievedRef.current;
+    maxProgressAchievedRef.current = Math.max(maxProgressAchievedRef.current, fraction);
+    return isBack;
+  }, []);
+
   const autoScroll = useAutoScroll(bookKey, viewRef);
   const { registerSpeedListeners, overlayVisible: speedOverlayVisible } =
     useAutoScrollSpeedGesture(autoScroll);
@@ -493,6 +504,11 @@ const FoliateViewer: React.FC<{
     // Fixed-layout (pre-paginated) books have no reflow room; injecting ruby
     // would overflow their fixed boxes, so skip Word Lens glosses there.
     const isFixedLayout = bookDoc.rendition?.layout === 'pre-paginated';
+    // Computed once per pass, not per doc — `isBackNavigation` mutates the
+    // high-water-mark ref as a side effect, and every doc in this pass shares
+    // the same progress snapshot.
+    const progress = getProgress(bookKey);
+    const isBack = progress ? isBackNavigation(progress.fraction) : false;
     for (const { doc } of contents) {
       if (doc) {
         const hasPending = doc.querySelectorAll('.warichu-pending').length > 0;
@@ -505,9 +521,8 @@ const FoliateViewer: React.FC<{
         if (vs && appService && !isFixedLayout) {
           void refreshSectionGlosses(doc, vs, buildWordLensCtx(bookLang));
         }
-        if (!isFixedLayout && bookData?.ebookContent) {
-          const progress = getProgress(bookKey);
-          if (progress) refreshSectionEntityIcons(doc, bookData.ebookContent, progress);
+        if (!isFixedLayout && bookData?.ebookContent && progress) {
+          refreshSectionEntityIcons(doc, bookData.ebookContent, progress, bookKey, isBack);
         }
       }
     }
@@ -888,11 +903,37 @@ const FoliateViewer: React.FC<{
     const isFixedLayout = bookDoc.rendition?.layout === 'pre-paginated';
     if (isFixedLayout) return;
     const contents = viewRef.current?.renderer?.getContents?.() || [];
+    const isBack = isBackNavigation(entityIconProgress.fraction);
     for (const { doc } of contents) {
-      if (doc) refreshSectionEntityIcons(doc, bookData.ebookContent, entityIconProgress);
+      if (doc)
+        refreshSectionEntityIcons(doc, bookData.ebookContent, entityIconProgress, bookKey, isBack);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityIconProgress?.fraction, entityIconProgress?.index]);
+
+  // The panel marks facts "seen" without progress moving at all (e.g. opening
+  // it and immediately closing it) — that can flip an entity's icon from
+  // shown to suppressed, but neither trigger above would otherwise re-run for
+  // an unchanged progress value, and the fingerprint cache would skip it even
+  // if one did. Force a refresh specifically for that case.
+  useEffect(() => {
+    const handleEntitySeenChanged = (event: CustomEvent<{ bookKey: string }>) => {
+      if (event.detail.bookKey !== bookKey) return;
+      const bookData = getBookData(bookKey);
+      const progress = getProgress(bookKey);
+      if (!bookData?.ebookContent || !progress) return;
+      if (bookDoc.rendition?.layout === 'pre-paginated') return;
+      const contents = viewRef.current?.renderer?.getContents?.() || [];
+      const isBack = isBackNavigation(progress.fraction);
+      for (const { doc } of contents) {
+        if (doc)
+          refreshSectionEntityIcons(doc, bookData.ebookContent, progress, bookKey, isBack, true);
+      }
+    };
+    eventDispatcher.on('entity-seen-changed', handleEntitySeenChanged);
+    return () => eventDispatcher.off('entity-seen-changed', handleEntitySeenChanged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookKey]);
 
   useEffect(() => {
     const mountCustomFonts = async () => {

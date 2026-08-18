@@ -8,6 +8,7 @@ import { useSessionStore } from '@/store/sessionStore';
 import { openVisualibleBook } from '@/services/visualible/openBook';
 import { getSessionFromSearchParams } from '@/services/visualible/session';
 import Reader from '@/app/reader/components/Reader';
+import BookLoadingScreen from '@/components/BookLoadingScreen';
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -47,11 +48,15 @@ function HomeContent() {
     );
   }
 
-  return (
-    <div className='flex min-h-screen items-center justify-center'>
-      <p className={error ? 'text-error' : 'text-base-content/70'}>{error ?? 'Opening book…'}</p>
-    </div>
-  );
+  if (error) {
+    return (
+      <div className='full-height flex items-center justify-center'>
+        <p className='text-error'>{error}</p>
+      </div>
+    );
+  }
+
+  return <BookLoadingScreen className='full-height' />;
 }
 
 export default function HomePage() {

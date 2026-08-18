@@ -1,5 +1,5 @@
-import React from 'react';
-import { MdStar } from 'react-icons/md';
+import React, { useRef } from 'react';
+import { MdStar, MdPerson, MdLocationOn, MdMenuBook, MdStickyNote2 } from 'react-icons/md';
 
 import { useTranslation } from '@/hooks/useTranslation';
 import type {
@@ -7,33 +7,65 @@ import type {
   CharacterEntity,
   FootnoteEntity,
   GlossaryEntity,
-  KnowledgeFact,
   PlaceEntity,
 } from '@/services/visualible/entityTypes';
+import { useEntityViewMemory } from '@/store/entityViewMemoryStore';
+import {
+  getFactId,
+  isFactVisible,
+  isIntroductionVisible,
+  isPlaceNarrativeFieldVisible,
+  withFactIds,
+  type IdentifiedFact,
+} from '@/app/reader/utils/entityFacts';
 
-// An item with no anchor_progress can't be gated — treat it as always safe to
-// show, same "unknown position ⇒ don't gate" rule the icon's own gating uses
-// (entityIcons.ts's isEligible).
-const isFactVisible = (anchorProgress: number | null, progressFraction: number): boolean =>
-  anchorProgress == null || anchorProgress <= progressFraction;
+// A fact that was ever shown (offered via an icon or actually opened) stays
+// visible even if the reader scrolls back past its anchor — otherwise
+// back-navigation would visibly retract facts already read.
+const factsOrSticky = (
+  facts: IdentifiedFact[],
+  progressFraction: number,
+  stickyIds: Set<string>,
+): IdentifiedFact[] =>
+  facts.filter(({ fact, id }) => stickyIds.has(id) || isFactVisible(fact, progressFraction));
 
-const visibleFacts = (facts: KnowledgeFact[], progressFraction: number): KnowledgeFact[] =>
-  facts.filter((fact) => isFactVisible(fact.anchor_progress, progressFraction));
+// Freezes the set of fact ids already seen *before this viewing* of an
+// entity, so facts that were already known don't flicker out of "new" mid-
+// session as the live "mark seen" effect (EntityPanel.tsx) writes newly-
+// opened/unlocked ids into the same memory this reads from. Re-snapshots
+// only when the entity being displayed actually changes.
+const useOpenedSeenIds = (entityKey: string, liveSeenInfo: string[] | undefined): Set<string> => {
+  const keyRef = useRef<string | null>(null);
+  const snapshotRef = useRef<Set<string>>(new Set());
+  if (keyRef.current !== entityKey) {
+    keyRef.current = entityKey;
+    snapshotRef.current = new Set(liveSeenInfo ?? []);
+  }
+  return snapshotRef.current;
+};
 
 // Kicker + title + optional type badge, shared by every entity category. Uses
 // `primary` (not a fixed hue) so the accent tracks whatever color the reader
 // picked in the theme menu — see store/themeStore.ts / styles/themes.ts.
 const EntityHeader: React.FC<{
+  icon: React.ReactNode;
   kicker: string;
   title: string;
   badge?: string;
-}> = ({ kicker, title, badge }) => (
-  <div className='mb-4'>
-    <div className='mb-1 flex items-center gap-2'>
-      <span className='text-primary text-xs font-semibold tracking-widest uppercase'>{kicker}</span>
-      {badge && <span className='badge badge-sm capitalize'>{badge}</span>}
+}> = ({ icon, kicker, title, badge }) => (
+  <div className='mb-4 flex items-start gap-3'>
+    <div className='bg-primary/10 text-primary eink-bordered flex h-9 w-9 shrink-0 items-center justify-center rounded-full'>
+      {icon}
     </div>
-    <h2 className='text-base-content text-lg font-semibold'>{title}</h2>
+    <div>
+      <div className='mb-1 flex items-center gap-2'>
+        <span className='text-primary text-xs font-semibold tracking-widest uppercase'>
+          {kicker}
+        </span>
+        {badge && <span className='badge badge-sm capitalize'>{badge}</span>}
+      </div>
+      <h2 className='text-base-content text-lg font-semibold'>{title}</h2>
+    </div>
   </div>
 );
 
@@ -62,20 +94,43 @@ const AlternativeNames: React.FC<{ names?: string[] }> = ({ names }) => {
   );
 };
 
-const FactSection: React.FC<{ title: string; facts: KnowledgeFact[] }> = ({ title, facts }) => {
+const FactSection: React.FC<{
+  title: string;
+  facts: IdentifiedFact[];
+  openedSeenIds: Set<string>;
+}> = ({ title, facts, openedSeenIds }) => {
+  const _ = useTranslation();
   if (facts.length === 0) return null;
+  const fresh = facts.filter(({ id }) => !openedSeenIds.has(id));
+  const seen = facts.filter(({ id }) => openedSeenIds.has(id));
   return (
     <section className='mb-5'>
       <h3 className='text-base-content/50 mb-2 text-xs font-bold tracking-[0.1em] uppercase'>
         {title}
       </h3>
-      <ul className='space-y-2.5 text-base'>
-        {facts.map((fact, i) => (
-          <li key={i} className='border-primary/30 border-l-2 pl-3'>
-            {fact.text}
-          </li>
-        ))}
-      </ul>
+      {fresh.length > 0 && (
+        <ul className='space-y-2.5 text-base'>
+          {fresh.map(({ fact, id }) => (
+            <li key={id} className='border-primary/30 border-l-2 pl-3'>
+              {fact.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {seen.length > 0 && (
+        <details className={fresh.length > 0 ? 'mt-2' : undefined} open={fresh.length === 0}>
+          <summary className='text-base-content/50 cursor-pointer text-xs font-medium select-none'>
+            {_('Previously seen ({{count}})', { count: seen.length })}
+          </summary>
+          <ul className='mt-2 space-y-2.5 text-base'>
+            {seen.map(({ fact, id }) => (
+              <li key={id} className='border-base-content/20 pl-3 opacity-70 border-l-2'>
+                {fact.text}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </section>
   );
 };
@@ -105,13 +160,50 @@ const CitationsList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
 
 export const CharacterContent: React.FC<{
   entity: CharacterEntity;
+  entityIndex: number;
+  bookKey: string;
   progressFraction: number;
-}> = ({ entity, progressFraction }) => {
+}> = ({ entity, entityIndex, bookKey, progressFraction }) => {
   const _ = useTranslation();
-  const showIntro = isFactVisible(entity.introduction.anchor_progress, progressFraction);
+  const bookId = bookKey.split('-')[0]!;
+  const entityKey = `character:${entityIndex}`;
+  const memory = useEntityViewMemory(bookId, entityKey);
+  const stickyIds = new Set([...(memory?.seenInfo ?? []), ...(memory?.offeredInfo ?? [])]);
+  const openedSeenIds = useOpenedSeenIds(entityKey, memory?.seenInfo);
+
+  const introId = getFactId('character', entityIndex, 'introduction', 0);
+  const showIntro =
+    stickyIds.has(introId) || isIntroductionVisible(entity.introduction, progressFraction);
+
+  const biography = factsOrSticky(
+    withFactIds(entity.biography, 'character', entityIndex, 'biography'),
+    progressFraction,
+    stickyIds,
+  );
+  const motivations = factsOrSticky(
+    withFactIds(entity.motivations, 'character', entityIndex, 'motivations'),
+    progressFraction,
+    stickyIds,
+  );
+  const conflicts = factsOrSticky(
+    withFactIds(entity.conflicts, 'character', entityIndex, 'conflicts'),
+    progressFraction,
+    stickyIds,
+  );
+  const notableEvents = factsOrSticky(
+    withFactIds(entity.notable_events, 'character', entityIndex, 'notable_events'),
+    progressFraction,
+    stickyIds,
+  );
+
   return (
     <div>
-      <EntityHeader kicker={_('Person')} title={entity.name} badge={entity.character_type} />
+      <EntityHeader
+        icon={<MdPerson size={18} />}
+        kicker={_('Person')}
+        title={entity.name}
+        badge={entity.character_type}
+      />
       {(entity.occupation || entity.social_status) && (
         <p className='text-base-content/60 mb-4 text-sm capitalize'>
           {[entity.occupation, entity.social_status]
@@ -125,35 +217,49 @@ export const CharacterContent: React.FC<{
           {entity.introduction.text}
         </p>
       )}
-      <FactSection
-        title={_('Biography')}
-        facts={visibleFacts(entity.biography, progressFraction)}
-      />
-      <FactSection
-        title={_('Motivations')}
-        facts={visibleFacts(entity.motivations, progressFraction)}
-      />
-      <FactSection
-        title={_('Conflicts')}
-        facts={visibleFacts(entity.conflicts, progressFraction)}
-      />
+      <FactSection title={_('Biography')} facts={biography} openedSeenIds={openedSeenIds} />
+      <FactSection title={_('Motivations')} facts={motivations} openedSeenIds={openedSeenIds} />
+      <FactSection title={_('Conflicts')} facts={conflicts} openedSeenIds={openedSeenIds} />
       <FactSection
         title={_('Notable Events')}
-        facts={visibleFacts(entity.notable_events, progressFraction)}
+        facts={notableEvents}
+        openedSeenIds={openedSeenIds}
       />
       <CitationsList citations={entity.citations} />
     </div>
   );
 };
 
-export const PlaceContent: React.FC<{ entity: PlaceEntity; progressFraction: number }> = ({
-  entity,
-  progressFraction,
-}) => {
+export const PlaceContent: React.FC<{
+  entity: PlaceEntity;
+  entityIndex: number;
+  bookKey: string;
+  progressFraction: number;
+}> = ({ entity, entityIndex, bookKey, progressFraction }) => {
   const _ = useTranslation();
+  const bookId = bookKey.split('-')[0]!;
+  const entityKey = `place:${entityIndex}`;
+  const memory = useEntityViewMemory(bookId, entityKey);
+  const stickyIds = new Set([...(memory?.seenInfo ?? []), ...(memory?.offeredInfo ?? [])]);
+  const openedSeenIds = useOpenedSeenIds(entityKey, memory?.seenInfo);
+
+  const facts = factsOrSticky(
+    withFactIds(entity.facts, 'place', entityIndex, 'facts'),
+    progressFraction,
+    stickyIds,
+  );
+  const narrativeId = getFactId('place', entityIndex, 'narrative', 0);
+  const showNarrative =
+    stickyIds.has(narrativeId) || isPlaceNarrativeFieldVisible(entity, progressFraction);
+
   return (
     <div>
-      <EntityHeader kicker={_('Place')} title={entity.name} badge={entity.type || undefined} />
+      <EntityHeader
+        icon={<MdLocationOn size={18} />}
+        kicker={_('Place')}
+        title={entity.name}
+        badge={entity.type || undefined}
+      />
       <AlternativeNames names={entity.alternative_names} />
       {entity.geography && (
         <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>{entity.geography}</p>
@@ -163,13 +269,13 @@ export const PlaceContent: React.FC<{ entity: PlaceEntity; progressFraction: num
           {entity.historical_context}
         </p>
       )}
-      <FactSection title={_('Facts')} facts={visibleFacts(entity.facts, progressFraction)} />
-      {entity.role_in_narrative && (
+      <FactSection title={_('Facts')} facts={facts} openedSeenIds={openedSeenIds} />
+      {showNarrative && entity.role_in_narrative && (
         <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>
           {entity.role_in_narrative}
         </p>
       )}
-      {entity.significance_in_book && (
+      {showNarrative && entity.significance_in_book && (
         <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>
           {entity.significance_in_book}
         </p>
@@ -184,6 +290,7 @@ export const GlossaryContent: React.FC<{ entity: GlossaryEntity }> = ({ entity }
   return (
     <div>
       <EntityHeader
+        icon={<MdMenuBook size={18} />}
         kicker={_('Term')}
         title={entity.term}
         badge={_('{{source}} definition', { source: entity.definition_source })}
@@ -229,7 +336,11 @@ export const FootnoteContent: React.FC<{ entity: FootnoteEntity }> = ({ entity }
   const _ = useTranslation();
   return (
     <div>
-      <EntityHeader kicker={_('End Note')} title={entity.source_label} />
+      <EntityHeader
+        icon={<MdStickyNote2 size={18} />}
+        kicker={_('End Note')}
+        title={entity.source_label}
+      />
       <p className='border-primary/30 border-l-2 pl-3 text-base'>{entity.target}</p>
     </div>
   );

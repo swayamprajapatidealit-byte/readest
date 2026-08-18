@@ -116,6 +116,40 @@ foliate-fxl {
   animation: scaleUpAndDown 0.3s ease forwards;
 }
 
+@keyframes book-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.book-loader-spin {
+  animation: book-loader-spin 1s linear infinite;
+}
+
+@keyframes book-loader-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.book-loader-pulse {
+  animation: book-loader-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-loader-spin,
+  .book-loader-pulse {
+    animation: none;
+  }
+}
+
 .window-button {
   @apply inline-flex h-6 w-6 items-center justify-center rounded-full;
   @apply transform transition duration-200 ease-in-out hover:scale-105;

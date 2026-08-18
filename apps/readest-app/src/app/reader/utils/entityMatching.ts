@@ -158,3 +158,48 @@ export const findEntityMatches = (doc: Document, matcher: EntityMatcher): Entity
 
   return matches;
 };
+
+/** Groups matches by entity (`category:entityIndex`) so a caller can narrow each group to one. */
+export const groupMatchesByEntity = (matches: EntityMatch[]): Map<string, EntityMatch[]> => {
+  const groups = new Map<string, EntityMatch[]>();
+  for (const match of matches) {
+    const key = `${match.category}:${match.entityIndex}`;
+    const group = groups.get(key);
+    if (group) group.push(match);
+    else groups.set(key, [match]);
+  }
+  return groups;
+};
+
+/**
+ * Narrows one entity's occurrences in a section down to the single match that
+ * should get an icon. Prefers a match inside the currently visible page
+ * (`viewportRange`, from `BookProgress.range`), then a match at or after a
+ * remembered offset (e.g. where the icon was previously placed), then falls
+ * back to the first occurrence in document order.
+ */
+export const selectPrimaryMatch = (
+  group: EntityMatch[],
+  opts: { viewportRange?: Range | null; preferredOffset?: number } = {},
+): EntityMatch => {
+  const sorted = [...group].sort((a, b) => a.start - b.start);
+  const { viewportRange, preferredOffset } = opts;
+
+  if (viewportRange) {
+    const inViewport = sorted.find((match) => {
+      try {
+        return viewportRange.isPointInRange(match.range.startContainer, match.range.startOffset);
+      } catch {
+        return false;
+      }
+    });
+    if (inViewport) return inViewport;
+  }
+
+  if (preferredOffset != null) {
+    const atOrAfter = sorted.find((match) => match.start >= preferredOffset);
+    if (atOrAfter) return atOrAfter;
+  }
+
+  return sorted[0]!;
+};

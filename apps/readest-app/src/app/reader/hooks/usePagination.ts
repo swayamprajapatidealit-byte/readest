@@ -18,6 +18,12 @@ export type ScrollSource = 'touch' | 'mouse';
 type PaginationSide = 'left' | 'right' | 'up' | 'down';
 type PaginationMode = 'pan' | 'page' | 'section';
 
+// A click only turns the page inside this fraction of the view's width from
+// each edge — everywhere else (the large middle) just toggles the header/
+// footer bar, so tapping the body of the page while reading doesn't
+// accidentally flip it.
+const EDGE_ZONE_RATIO = 0.15;
+
 const swapLeftRight = (side: PaginationSide) => {
   if (side === 'left') return 'right';
   if (side === 'right') return 'left';
@@ -238,15 +244,14 @@ export const usePagination = (
               windowStartX = window.screenX;
             }
             const viewStartX = windowStartX + viewRect.left;
-            const viewCenterX = viewStartX + viewRect.width / 2;
             const consumed = eventDispatcher.dispatchSync('iframe-single-click');
             if (!consumed) {
-              const centerStartX = viewStartX + viewRect.width * 0.375;
-              const centerEndX = viewStartX + viewRect.width * 0.625;
-              if (
-                viewSettings.disableClick! ||
-                (screenX >= centerStartX && screenX <= centerEndX)
-              ) {
+              const leftEdgeEnd = viewStartX + viewRect.width * EDGE_ZONE_RATIO;
+              const rightEdgeStart = viewStartX + viewRect.width * (1 - EDGE_ZONE_RATIO);
+              const inLeftEdge = screenX <= leftEdgeEnd;
+              const inRightEdge = screenX >= rightEdgeStart;
+
+              if (viewSettings.disableClick! || (!inLeftEdge && !inRightEdge)) {
                 // toggle visibility of the header bar and the footer bar
                 setHoveredBookKey(hoveredBookKey ? null : bookKey);
                 return;
@@ -257,18 +262,17 @@ export const usePagination = (
                 return;
               }
 
-              const side: PaginationSide =
-                screenX >= viewCenterX
-                  ? viewSettings.fullscreenClickArea
-                    ? 'down'
-                    : viewSettings.swapClickArea
-                      ? 'left'
-                      : 'right'
-                  : viewSettings.fullscreenClickArea
-                    ? 'down'
-                    : viewSettings.swapClickArea
-                      ? 'right'
-                      : 'left';
+              const side: PaginationSide = inRightEdge
+                ? viewSettings.fullscreenClickArea
+                  ? 'down'
+                  : viewSettings.swapClickArea
+                    ? 'left'
+                    : 'right'
+                : viewSettings.fullscreenClickArea
+                  ? 'down'
+                  : viewSettings.swapClickArea
+                    ? 'right'
+                    : 'left';
 
               if (viewSettings.readingRulerEnabled && dispatchReadingRulerMove(side)) {
                 return;
@@ -329,13 +333,13 @@ export const usePagination = (
       if (msg.type === 'click') {
         const { clientX } = msg;
         const width = window.innerWidth;
-        const leftThreshold = width * 0.5;
-        const rightThreshold = width * 0.5;
+        const leftEdgeEnd = width * EDGE_ZONE_RATIO;
+        const rightEdgeStart = width * (1 - EDGE_ZONE_RATIO);
         const viewSettings = getViewSettings(bookKey);
         if (!viewSettings?.disableClick) {
-          if (clientX < leftThreshold) {
+          if (clientX <= leftEdgeEnd) {
             viewPagination(viewRef.current, viewSettings, 'left');
-          } else if (clientX > rightThreshold) {
+          } else if (clientX >= rightEdgeStart) {
             viewPagination(viewRef.current, viewSettings, 'right');
           }
         }

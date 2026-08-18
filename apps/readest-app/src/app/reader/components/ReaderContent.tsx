@@ -21,7 +21,7 @@ import { BookDetailModal } from '@/components/metadata';
 
 import useBooksManager from '../hooks/useBooksManager';
 import useBookShortcuts from '../hooks/useBookShortcuts';
-import Spinner from '@/components/Spinner';
+import BookLoadingScreen from '@/components/BookLoadingScreen';
 import SideBar from './sidebar/SideBar';
 import Notebook from './notebook/Notebook';
 import EntityPanel from './entity/EntityPanel';
@@ -187,14 +187,7 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
   const viewSettings = getViewSettings(bookKeys[0]!);
   if (!bookData || !bookData.book || !bookData.bookDoc || !viewSettings) {
     setTimeout(() => setLoading(true), 200);
-    return (
-      loading &&
-      !errorLoading && (
-        <div className='hero hero-content full-height'>
-          <Spinner loading={true} />
-        </div>
-      )
-    );
+    return loading && !errorLoading && <BookLoadingScreen className='full-height' />;
   }
 
   return (

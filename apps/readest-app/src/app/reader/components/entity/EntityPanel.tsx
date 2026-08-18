@@ -11,6 +11,8 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useReaderStore } from '@/store/readerStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useEntityPanelStore, type SelectedEntityRef } from '@/store/entityPanelStore';
+import { markEntityInfoSeen } from '@/store/entityViewMemoryStore';
+import { getVisibleFactIds, resolveEntity } from '@/app/reader/utils/entityFacts';
 import { eventDispatcher } from '@/utils/event';
 import { getBookDirFromLanguage } from '@/utils/book';
 import { getPanelTopInset } from '@/utils/insets';
@@ -78,6 +80,35 @@ const EntityPanel: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Marks the entity's currently-visible facts as seen so its icon can
+  // suppress once opened, and re-fires as progress advances while the panel
+  // stays open (e.g. pinned across page turns) to pick up newly-unlocked facts.
+  useEffect(() => {
+    if (!isEntityPanelVisible || !selectedEntityRef) return;
+    const { bookKey, category, entityIndex } = selectedEntityRef;
+    if (category === 'footnote') return;
+    const ebookContent = getBookData(bookKey)?.ebookContent;
+    if (!ebookContent) return;
+    const entity = resolveEntity(ebookContent, category, entityIndex);
+    if (!entity) return;
+    const visibleIds = getVisibleFactIds(entity, category, entityIndex, progress?.fraction ?? 0);
+    if (visibleIds.length === 0) return;
+    const bookId = bookKey.split('-')[0]!;
+    const entityKey = `${category}:${entityIndex}`;
+    const changed = markEntityInfoSeen(
+      bookId,
+      entityKey,
+      visibleIds,
+      progress?.index ?? 0,
+      entityKey,
+    );
+    // The icon's suppression state can flip without progress moving at all
+    // (e.g. open the panel, then close it) — nothing else would re-run the
+    // icon refresh for an unchanged progress value, so ask for one directly.
+    if (changed) eventDispatcher.dispatch('entity-seen-changed', { bookKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEntityPanelVisible, selectedEntityRef, progress]);
+
   const handleClose = () => setEntityPanelVisible(false);
   useShortcuts({ onEscape: handleClose }, [handleClose]);
 
@@ -110,12 +141,26 @@ const EntityPanel: React.FC = () => {
       case 'character': {
         const entity = ebookContent.characters[entityIndex];
         if (!entity) return null;
-        return <CharacterContent entity={entity} progressFraction={progressFraction} />;
+        return (
+          <CharacterContent
+            entity={entity}
+            entityIndex={entityIndex}
+            bookKey={bookKey}
+            progressFraction={progressFraction}
+          />
+        );
       }
       case 'place': {
         const entity = ebookContent.places[entityIndex];
         if (!entity) return null;
-        return <PlaceContent entity={entity} progressFraction={progressFraction} />;
+        return (
+          <PlaceContent
+            entity={entity}
+            entityIndex={entityIndex}
+            bookKey={bookKey}
+            progressFraction={progressFraction}
+          />
+        );
       }
       case 'glossary': {
         const entity = ebookContent.glossary[entityIndex];

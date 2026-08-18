@@ -5,6 +5,7 @@ import { EnvConfigType } from '@/services/environment';
 import { BookDoc } from '@/libs/document';
 import { EbookContent } from '@/services/visualible/ebookContent';
 import { useLibraryStore } from './libraryStore';
+import { clearEntityViewMemory } from './entityViewMemoryStore';
 
 // Ebook content (characters/places/glossary/footnotes) is fetched during import in
 // `src/app/page.tsx`, before the book has a `BookData` entry in this store — that
@@ -119,6 +120,7 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
   },
   clearBookData: (keyOrId: string) => {
     const id = keyOrId.split('-')[0]!;
+    clearEntityViewMemory(id);
     set((state) => {
       const newBooksData = { ...state.booksData };
       delete newBooksData[id];

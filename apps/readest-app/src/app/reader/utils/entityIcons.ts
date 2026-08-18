@@ -1,6 +1,14 @@
 import type { EbookContent } from '@/services/visualible/ebookContent';
 import type { EntityAnchor } from '@/services/visualible/entityTypes';
-import { buildEntityMatcher, findEntityMatches, type EntityCategory } from './entityMatching';
+import { getEntityViewMemory, offerEntityFacts } from '@/store/entityViewMemoryStore';
+import {
+  buildEntityMatcher,
+  findEntityMatches,
+  groupMatchesByEntity,
+  selectPrimaryMatch,
+  type EntityCategory,
+} from './entityMatching';
+import { getVisibleFactIds, resolveEntity } from './entityFacts';
 
 const ICON_CLASS = 'entity-icon';
 
@@ -19,6 +27,8 @@ const ICON_SVG =
 interface EntityProgress {
   fraction: number;
   index: number;
+  /** The currently visible page/spread, for preferring an in-viewport occurrence. */
+  range?: Range | null;
 }
 
 const getAnchor = (
@@ -38,13 +48,20 @@ const getAnchor = (
   }
 };
 
+// Float rounding guard only — NOT a page-sized reveal threshold. Foliate's
+// `progress.fraction` is already computed as the fraction at the END of the
+// currently visible page (see progress.js's SectionProgress.getProgress), so
+// "reached anywhere on this page" is already the behavior; a bigger epsilon
+// here would double that and surface spoilers a page early.
+const PROGRESS_EPSILON = 1e-6;
+
 // An anchor the pipeline couldn't actually locate in the text (`found: false`)
 // can't be gated against — treat it as always-eligible rather than hiding the
 // icon forever.
 const isEligible = (anchor: EntityAnchor | undefined, progress: EntityProgress): boolean => {
   if (!anchor || !anchor.found) return true;
   if (progress.index !== anchor.spine_index) return progress.index > anchor.spine_index;
-  return progress.fraction >= anchor.global_progress;
+  return progress.fraction + PROGRESS_EPSILON >= anchor.global_progress;
 };
 
 const createIconMarker = (
@@ -71,6 +88,12 @@ export const clearEntityIcons = (doc: Document): void => {
   (doc.body ?? doc.documentElement)?.normalize();
 };
 
+// Per-doc fingerprint of the last refresh pass actually run, so a trigger that
+// fires again with the same rounded progress (e.g. a sub-pixel scroll tick, or
+// both the `stabilized` and progress-change triggers firing for the same page
+// turn) skips the DOM work entirely instead of re-clearing and re-matching.
+const lastRefreshFingerprint = new WeakMap<Document, string>();
+
 /**
  * Re-render entity icons for one section doc. Clears first, then re-matches and
  * injects the icons eligible at the given reading progress.
@@ -83,25 +106,78 @@ export const clearEntityIcons = (doc: Document): void => {
  *
  * Footnotes are not iconified here — they use the book's own existing
  * footnote-reference markers as the click target instead (see iframeEventHandlers.ts).
+ *
+ * `force` bypasses the fingerprint cache for a pass triggered by something
+ * other than a progress/layout change — e.g. the entity panel just marked a
+ * fact seen, which can flip an icon's suppression state without progress
+ * moving at all (see the 'entity-seen-changed' listener in FoliateViewer.tsx).
  */
 export const refreshSectionEntityIcons = (
   doc: Document,
   content: EbookContent,
   progress: EntityProgress,
+  bookKey: string,
+  isBackNavigation = false,
+  force = false,
 ): void => {
   try {
+    const fingerprint = `${progress.index}:${progress.fraction.toFixed(4)}:${isBackNavigation ? 1 : 0}`;
+    if (!force && lastRefreshFingerprint.get(doc) === fingerprint) return;
+    lastRefreshFingerprint.set(doc, fingerprint);
+
     clearEntityIcons(doc);
+    const bookId = bookKey.split('-')[0]!;
 
     const matcher = buildEntityMatcher(content);
     const matches = findEntityMatches(doc, matcher);
+
+    // Narrow every entity down to a single occurrence per section — an entity
+    // mentioned 5 times on one page previously got 5 icons. On back-navigation,
+    // reuse the exact occurrence this entity was previously placed at in this
+    // section (if recorded) instead of recomputing from the viewport, so the
+    // icon doesn't jump to a different occurrence on a re-visit.
+    const groups = groupMatchesByEntity(matches);
+    const primaryMatches = [...groups.values()].map((group) => {
+      const { category, entityIndex } = group[0]!;
+      const entityKey = `${category}:${entityIndex}`;
+      const rememberedOffsets = isBackNavigation
+        ? getEntityViewMemory(bookId, entityKey)?.offeredAtOffsets[`s${progress.index}`]
+        : undefined;
+      const preferredOffset = rememberedOffsets?.at(-1);
+      // A remembered offset wins outright on back-nav — don't let viewport
+      // preference override the exact occurrence being replayed.
+      return selectPrimaryMatch(group, {
+        viewportRange: preferredOffset == null ? progress.range : undefined,
+        preferredOffset,
+      });
+    });
+
     // Process right-to-left within the section: splitting a text node for one
     // match must not invalidate the offset of an earlier match still pending on
     // the same node. Mirrors wordlensRuby.applyGlosses's `b.start - a.start` sort.
-    const sorted = [...matches].sort((a, b) => b.start - a.start);
+    const sorted = primaryMatches.sort((a, b) => b.start - a.start);
 
     for (const match of sorted) {
       const anchor = getAnchor(content, match.category, match.entityIndex);
       if (!isEligible(anchor, progress)) continue;
+
+      const entity = resolveEntity(content, match.category, match.entityIndex);
+      if (!entity) continue;
+
+      // Nothing to show yet for this entity at the current progress — no icon.
+      const visibleIds = getVisibleFactIds(
+        entity,
+        match.category,
+        match.entityIndex,
+        progress.fraction,
+      );
+      if (visibleIds.length === 0) continue;
+
+      // Every currently-visible fact has already been opened — suppress the icon.
+      const entityKey = `${match.category}:${match.entityIndex}`;
+      const memory = getEntityViewMemory(bookId, entityKey);
+      const hasUnseen = visibleIds.some((id) => !memory?.seenInfo.includes(id));
+      if (!hasUnseen) continue;
 
       const endContainer = match.range.endContainer;
       if (endContainer.nodeType !== Node.TEXT_NODE) continue;
@@ -111,6 +187,7 @@ export const refreshSectionEntityIcons = (
         const afterNode = textNode.splitText(match.range.endOffset);
         const marker = createIconMarker(doc, match.category, match.entityIndex);
         textNode.parentNode?.insertBefore(marker, afterNode);
+        offerEntityFacts(bookId, entityKey, visibleIds, progress.index, match.start);
       } catch {
         // Range became invalid (concurrent mutation); skip this one.
       }
