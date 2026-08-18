@@ -180,6 +180,10 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invertImgColorInDark]);
 
+  // skipGlobal: true — like Zoom/Contrast/Invert Image above, this applies only
+  // to this exact pane's bookKey, not every open pane/book. A split-view pane
+  // of the same book gets its own independent on/off, matching its own
+  // separate ViewSettings object rather than the (default-on) global sync.
   useEffect(() => {
     if (entityIconsCharactersEnabled === viewSettings.entityIconsCharactersEnabled) return;
     saveViewSettings(
@@ -187,7 +191,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
       bookKey,
       'entityIconsCharactersEnabled',
       entityIconsCharactersEnabled,
-      false,
+      true,
       false,
     );
     eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
@@ -201,7 +205,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
       bookKey,
       'entityIconsPlacesEnabled',
       entityIconsPlacesEnabled,
-      false,
+      true,
       false,
     );
     eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
@@ -215,7 +219,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
       bookKey,
       'entityIconsGlossaryEnabled',
       entityIconsGlossaryEnabled,
-      false,
+      true,
       false,
     );
     eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
