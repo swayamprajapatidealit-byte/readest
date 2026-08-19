@@ -9,6 +9,7 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getGridTemplate, getInsetEdges } from '@/utils/grid';
 import { useContentInsets } from '../hooks/useContentInsets';
+import { useSplitDividerResize } from '../hooks/useSplitDividerResize';
 import SearchResultsNav from './sidebar/SearchResultsNav';
 import BooknotesNav from './sidebar/BooknotesNav';
 import FoliateViewer from './FoliateViewer';
@@ -24,6 +25,8 @@ import HintInfo from './HintInfo';
 import ReadingRuler from './ReadingRuler';
 import DoubleBorder from './DoubleBorder';
 import ReadingStatsTracker from './ReadingStatsTracker';
+import Spinner from '@/components/Spinner';
+import SplitDivider from './SplitDivider';
 
 interface BooksGridProps {
   bookKeys: string[];
@@ -68,6 +71,9 @@ interface BookCellProps {
   isDropdownOpen: boolean;
   setDropdownOpenForBook: (bookKey: string, isOpen: boolean) => void;
   onCloseBook: (bookKey: string) => void;
+  // True while a split-view divider drag is being committed and this pane's
+  // content is re-paginating for its new width (see useSplitDividerResize).
+  isResizingSplit?: boolean;
 }
 
 const BookCellInner: React.FC<BookCellProps> = ({
@@ -79,6 +85,7 @@ const BookCellInner: React.FC<BookCellProps> = ({
   isDropdownOpen,
   setDropdownOpenForBook,
   onCloseBook,
+  isResizingSplit,
 }) => {
   // Per-field selectors — see store/readerProgressStore.ts header for the
   // "destructure-subscribes-the-whole-store" rationale.
@@ -259,6 +266,19 @@ const BookCellInner: React.FC<BookCellProps> = ({
         gridInsets={gridInsets}
       />
       <ReadingStatsTracker bookKey={bookKey} />
+      {/*
+        Committing a divider drag resizes this pane, which forces the epub
+        engine to fully re-paginate — otherwise a visible flash/white-out
+        mid-reflow. A translucent, blurred veil (rather than a flat cover)
+        softens that into a brief frosted-glass transition instead, and it
+        sits above every other layer in this cell so nothing else (header,
+        footer, ruler, etc.) visibly jumps mid-reflow either.
+      */}
+      {isResizingSplit && (
+        <div className='bg-base-100/60 not-eink:backdrop-blur-sm eink:bg-base-100 absolute inset-0 z-30 flex items-center justify-center'>
+          <Spinner loading={true} />
+        </div>
+      )}
     </div>
   );
 };
@@ -279,12 +299,25 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
 
   const { safeAreaInsets: screenInsets } = useThemeStore();
   const aspectRatio = window.innerWidth / window.innerHeight;
+  // The divider is only offered for a landscape 2-pane split — portrait
+  // stacks and 3+ pane layouts keep their existing fixed grids untouched.
+  const isDraggableSplit = bookKeys.length === 2 && aspectRatio >= 1;
   // Only meaningful for exactly 2 panes — a stale value left over from a
   // closed split view is otherwise harmless since it's never read here.
   const gridTemplate = getGridTemplate(
     bookKeys.length,
     aspectRatio,
     bookKeys.length === 2 ? splitMainPaneFraction : null,
+  );
+
+  const gridRef = useRef<HTMLDivElement>(null);
+  // Called unconditionally (rules of hooks) — falls back to empty keys when
+  // there isn't a draggable 2-pane split; its output is simply unused then.
+  const { previewFraction, isResizing, handleDragStart, handleDragKeyDown } = useSplitDividerResize(
+    gridRef,
+    isDraggableSplit ? bookKeys[0]! : '',
+    isDraggableSplit ? bookKeys[1]! : '',
+    splitMainPaneFraction,
   );
 
   useEffect(() => {
@@ -340,24 +373,69 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
 
   return (
     <div
+      ref={gridRef}
       className='books-grid bg-base-100 relative grid h-full flex-grow'
       style={gridStyle}
       role='main'
       aria-label={_('Books Content')}
     >
-      {bookKeys.map((bookKey, index) => (
-        <BookCell
-          key={bookKey}
-          bookKey={bookKey}
-          gridInsets={perBookGridInsets[index]!}
-          screenInsets={screenInsets}
-          isHoveredAnim={isHoveredAnim}
-          hoveredBookKey={hoveredBookKey}
-          isDropdownOpen={dropdownOpenBook === bookKey}
-          setDropdownOpenForBook={setDropdownOpenForBook}
-          onCloseBook={onCloseBook}
-        />
-      ))}
+      {isDraggableSplit ? (
+        <>
+          <BookCell
+            key={bookKeys[0]}
+            bookKey={bookKeys[0]!}
+            gridInsets={perBookGridInsets[0]!}
+            screenInsets={screenInsets}
+            isHoveredAnim={isHoveredAnim}
+            hoveredBookKey={hoveredBookKey}
+            isDropdownOpen={dropdownOpenBook === bookKeys[0]}
+            setDropdownOpenForBook={setDropdownOpenForBook}
+            onCloseBook={onCloseBook}
+            isResizingSplit={isResizing}
+          />
+          <SplitDivider
+            fraction={splitMainPaneFraction ?? 0.5}
+            isResizing={isResizing}
+            onDragStart={handleDragStart}
+            onDragKeyDown={handleDragKeyDown}
+          />
+          <BookCell
+            key={bookKeys[1]}
+            bookKey={bookKeys[1]!}
+            gridInsets={perBookGridInsets[1]!}
+            screenInsets={screenInsets}
+            isHoveredAnim={isHoveredAnim}
+            hoveredBookKey={hoveredBookKey}
+            isDropdownOpen={dropdownOpenBook === bookKeys[1]}
+            setDropdownOpenForBook={setDropdownOpenForBook}
+            onCloseBook={onCloseBook}
+            isResizingSplit={isResizing}
+          />
+          {/* Free-floating drag preview — positioned against the whole grid
+              (not the divider's own narrow gutter cell), so it can track the
+              pointer anywhere without the real columns moving until release. */}
+          {previewFraction != null && (
+            <div
+              className='bg-base-content/70 pointer-events-none absolute inset-y-0 z-40 w-0.5'
+              style={{ left: `${previewFraction * 100}%` }}
+            />
+          )}
+        </>
+      ) : (
+        bookKeys.map((bookKey, index) => (
+          <BookCell
+            key={bookKey}
+            bookKey={bookKey}
+            gridInsets={perBookGridInsets[index]!}
+            screenInsets={screenInsets}
+            isHoveredAnim={isHoveredAnim}
+            hoveredBookKey={hoveredBookKey}
+            isDropdownOpen={dropdownOpenBook === bookKey}
+            setDropdownOpenForBook={setDropdownOpenForBook}
+            onCloseBook={onCloseBook}
+          />
+        ))
+      )}
     </div>
   );
 };

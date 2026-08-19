@@ -10,7 +10,7 @@ import { useFoliateEvents } from '../hooks/useFoliateEvents';
 import { useCustomFontStore } from '@/store/customFontStore';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import { getFootnoteStyles, getStyles, getThemeCode } from '@/utils/style';
-import { getSplitMainPaneFraction } from '@/utils/config';
+import { SPLIT_MAIN_PANE_FRACTION } from '@/utils/config';
 import { getEntityPanelSide, getPopupPosition, getPosition, Position } from '@/utils/sel';
 import { FootnoteHandler } from 'foliate-js/footnotes.js';
 import { mountAdditionalFonts, mountCustomFont } from '@/styles/fonts';
@@ -285,12 +285,22 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
       ) {
         sidebar.setSideBarVisible(false);
       }
-      // Keep the main pane's reflowable column from shrinking when this is
-      // the first pane opening a split — an even 50/50 is fine (and left
-      // alone) whenever it wouldn't force the main pane narrower than its
-      // current column width (see getSplitMainPaneFraction).
+      // A 2-pane split is already open — keep browsing links into that SAME
+      // second pane instead of stacking a third one on top of it. A 3rd pane
+      // would also silently drop the divider (and whatever ratio the user
+      // dragged it to), since the divider only renders for an exact 2-pane
+      // layout — appending unconditionally made every further Ctrl/Cmd+Click
+      // look like "the divider reset to default".
+      if (bookKeys.length === 2) {
+        const otherKey = bookKeys.find((key) => key !== bookKey)!;
+        goToCfiWhenReady(otherKey, detail.href);
+        return;
+      }
+      // Give the main pane the bigger share (70/30) when this is the first
+      // pane opening a split, so the content the reader was looking at stays
+      // in view instead of being squeezed by an even 50/50 split.
       if (bookKeys.length === 1) {
-        useReaderStore.getState().setSplitMainPaneFraction(getSplitMainPaneFraction(viewSettings));
+        useReaderStore.getState().setSplitMainPaneFraction(SPLIT_MAIN_PANE_FRACTION);
       }
       const bookHash = bookKey.split('-')[0]!;
       const newKey = appendBook(bookHash, false, false);

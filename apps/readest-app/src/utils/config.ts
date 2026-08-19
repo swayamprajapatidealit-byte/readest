@@ -31,27 +31,12 @@ export const getDefaultMaxBlockSize = () => {
   return Math.max(screenWidth, screenHeight, 1440);
 };
 
-// Smallest a Ctrl/Cmd+Click split-view peek pane is allowed to shrink to —
-// matches EntityPanel's own MIN_ENTITY_PANEL_WIDTH floor for a "usable side
-// panel" width.
-const MIN_SPLIT_PEEK_FRACTION = 0.25;
+// Fraction (0-1) of the window width the MAIN pane keeps when a Ctrl/Cmd+Click
+// split view opens next to it, so the content the reader was just looking at
+// stays comfortably in view instead of an even 50/50 split.
+export const SPLIT_MAIN_PANE_FRACTION = 0.7;
 
-/**
- * Fraction (0-1) of the window width the MAIN pane needs to keep its current
- * column width when a split view opens next to it, instead of the default
- * even 50/50 split. `paginator.js`'s #beforeRender derives column width from
- * container width (`columnWidth ≈ hostSize / columnCount - gap - margins`);
- * on a wide screen showing a 2-column spread, an even split usually collapses
- * cleanly to 1 column of nearly the same width for free — this only kicks in
- * when the main pane is already single-column and would otherwise be forced
- * narrower than its current `maxInlineSize` target. The margin/gap overhead
- * below is an approximation (paginator.js's gap is a % of container width,
- * not a fixed px value) — intentionally generous so the main pane errs on
- * the side of a little extra room rather than being cut just short.
- */
-export const getSplitMainPaneFraction = (viewSettings: ViewSettings): number => {
-  const maxInlineSize = getMaxInlineSize(viewSettings);
-  const overheadPx = 64;
-  const neededFraction = (maxInlineSize + overheadPx) / window.innerWidth;
-  return Math.min(Math.max(neededFraction, 0.5), 1 - MIN_SPLIT_PEEK_FRACTION);
-};
+// Bounds for dragging the split-view divider (SplitDivider.tsx) — keeps
+// either pane from being resized down to an unreadably thin sliver.
+export const MIN_SPLIT_PANE_FRACTION = 0.25;
+export const MAX_SPLIT_PANE_FRACTION = 0.75;
