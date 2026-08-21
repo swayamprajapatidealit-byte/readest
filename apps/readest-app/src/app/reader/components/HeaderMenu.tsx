@@ -3,7 +3,7 @@ import React from 'react';
 import { FaHeadphones } from 'react-icons/fa6';
 import { RiArrowGoBackLine, RiArrowGoForwardLine } from 'react-icons/ri';
 import { RiQuillPenLine } from 'react-icons/ri';
-import { MdCheck } from 'react-icons/md';
+import { MdCheck, MdTour } from 'react-icons/md';
 
 import { AnnotationToolType } from '@/types/annotator';
 import { useEnv } from '@/context/EnvContext';
@@ -105,6 +105,14 @@ const HeaderMenu: React.FC<HeaderMenuProps> = ({ bookKey, menuClassName, setIsDr
         toggled={sideBarBookKey === bookKey && isNotebookVisible}
         transient
         onClick={handleToggleNotebook}
+      />
+
+      <hr aria-hidden='true' className='border-base-300 my-1' />
+      <MenuItem
+        label={_('Take a Tour')}
+        Icon={MdTour}
+        transient
+        onClick={() => eventDispatcher.dispatch('start-product-tour', { bookKey })}
       />
 
       {enableAnnotationQuickActions && (

@@ -16,6 +16,7 @@ import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { ProofreadRulesManager } from './ProofreadRules';
 import { Toast } from '@/components/Toast';
 import BrightnessOverlay from './BrightnessOverlay';
+import ProductTour from './tour/ProductTour';
 import { getLocale } from '@/utils/misc';
 import { initDayjs } from '@/utils/time';
 import ReaderContent from './ReaderContent';
@@ -29,6 +30,9 @@ Z-Index Layering Guide:
      • Ensures the border stays on top of all UI elements.
 50 – Loading Progress / Toast Notifications / Dialogs / Popups
      • Includes Settings, About, Updater dialogs and Annotation popups.
+48 – Product Tour
+     • Sits above all reading chrome/panels (45) but below dialogs/toasts (50),
+       so an error toast or Settings dialog still surfaces over an active tour.
 45 – Sidebar / Notebook (Unpinned)
      • Floats above the content but below global dialogs.
 40 – TTS Bar
@@ -68,6 +72,7 @@ const Reader: React.FC<{ ids?: string }> = ({ ids }) => {
         <ProofreadRulesManager />
         <Toast />
         <BrightnessOverlay />
+        <ProductTour />
       </Suspense>
     </div>
   ) : (
