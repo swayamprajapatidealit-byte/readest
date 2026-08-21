@@ -203,7 +203,9 @@
       "Bash(curl -s http://localhost:3000/reader -o /dev/null -w \"reader route status: %{http_code}\\\\n\")",
       "Bash(curl -s http://localhost:3000/ -o /dev/null -w \"home route status: %{http_code}\\\\n\")",
       "Bash(awk 'NR==88,NR==260' /home/ideal38/ideal-it/readest/apps/readest-app/src/app/reader/components/BooksGrid.tsx)",
-      "Bash(curl -s http://localhost:3000/ -o /dev/null -w \"status: %{http_code}\\\\n\" --max-time 5)"
+      "Bash(curl -s http://localhost:3000/ -o /dev/null -w \"status: %{http_code}\\\\n\" --max-time 5)",
+      "Bash(pnpm -v)",
+      "Bash(npx --yes pnpm@11.1.1 -v)"
     ],
     "additionalDirectories": [
       "/home/ideal38/ideal-it/readest/packages/simplecc-wasm/OpenCC",
