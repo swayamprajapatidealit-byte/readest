@@ -154,8 +154,9 @@ const ReaderContent: React.FC<{ ids?: string; settings: SystemSettings }> = ({ i
     navigateBackToHome();
   };
 
-  const handleCloseReaderToHome = () => {
-    return handleCloseBooks(true);
+  const handleCloseReaderToHome = async () => {
+    await handleCloseBooks(true);
+    navigateBackToHome();
   };
 
   // Also wired directly to beforeunload/quit-app/window-close, which pass an

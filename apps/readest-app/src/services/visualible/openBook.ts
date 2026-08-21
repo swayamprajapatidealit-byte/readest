@@ -85,6 +85,7 @@ export const openVisualibleBook = async (
   if (ebookContent) {
     useBookDataStore.getState().setEbookContent(book.hash, { ...ebookContent, excludedWords });
   }
+  useBookDataStore.getState().setBookDetail(book.hash, detail);
   useSessionStore.getState().setHashForSlug(slug, book.hash);
   return book.hash;
 };

@@ -10,19 +10,13 @@ import { useBookDataStore } from '@/store/bookDataStore';
 
 interface PageNavigationButtonsProps {
   bookKey: string;
-  isDropdownOpen: boolean;
 }
 
-const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
-  bookKey,
-  isDropdownOpen,
-}) => {
+const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({ bookKey }) => {
   const _ = useTranslation();
   const getBookData = useBookDataStore((s) => s.getBookData);
   const getView = useReaderStore((s) => s.getView);
   const getViewSettings = useReaderStore((s) => s.getViewSettings);
-  // hoveredBookKey is reactive state — drives button visibility.
-  const hoveredBookKey = useReaderStore((s) => s.hoveredBookKey);
   const bookData = getBookData(bookKey);
   const view = getView(bookKey);
   const viewSettings = getViewSettings(bookKey);
@@ -32,9 +26,6 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
   const { section, pageinfo } = progress || {};
   const pageInfo = bookData?.isFixedLayout ? section : pageinfo;
   const currentPage = pageInfo?.current;
-
-  const isPageNavigationButtonsVisible =
-    (hoveredBookKey === bookKey || isDropdownOpen) && viewSettings?.showPaginationButtons;
 
   const handleGoLeftPage = useCallback(() => {
     viewPagination(view, viewSettings, 'left', 'page');
@@ -84,18 +75,10 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
         </div>
       )}
 
-      <div
-        className={clsx(
-          'absolute left-2 -translate-y-1/2',
-          'flex items-center gap-1',
-          isPageNavigationButtonsVisible ? 'top-1/2 opacity-100' : 'bottom-2 opacity-0',
-          !isPageNavigationButtonsVisible ? 'pointer-events-none' : '',
-        )}
-      >
+      <div className='absolute left-2 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1'>
         <button
           onClick={handleGoLeftSection}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
-          aria-hidden={false}
           aria-label={getLeftSectionLabel()}
           tabIndex={0}
         >
@@ -113,7 +96,6 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
         <button
           onClick={handleGoLeftPage}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
-          aria-hidden={false}
           aria-label={getLeftPageLabel()}
           tabIndex={0}
         >
@@ -130,18 +112,10 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
         </button>
       </div>
 
-      <div
-        className={clsx(
-          'absolute right-2 -translate-y-1/2',
-          'flex items-center gap-1',
-          isPageNavigationButtonsVisible ? 'top-1/2 opacity-100' : 'bottom-2 opacity-0',
-          !isPageNavigationButtonsVisible ? 'pointer-events-none' : '',
-        )}
-      >
+      <div className='absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1'>
         <button
           onClick={handleGoRightPage}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
-          aria-hidden={false}
           aria-label={getRightPageLabel()}
           tabIndex={0}
         >
@@ -159,7 +133,6 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
         <button
           onClick={handleGoRightSection}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
-          aria-hidden={false}
           aria-label={getRightSectionLabel()}
           tabIndex={0}
         >

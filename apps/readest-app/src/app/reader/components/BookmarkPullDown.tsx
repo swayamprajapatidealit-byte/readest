@@ -20,26 +20,29 @@ import {
   shouldActivatePull,
   type BookmarkPullHandlers,
 } from '@/app/reader/utils/bookmarkPullGesture';
-import Ribbon from './Ribbon';
 
 const SPRING_MS = 250;
-const RIBBON_BODY_HEIGHT = 44; // matches Ribbon.tsx: safe-area top + header bar height
+// Must track HeaderBar's actual rendered height (the `h-16` row) so the
+// gesture's rest-height math (notch depth, ribbon growth curve) matches the
+// header's real bottom edge. The resting ribbon that used to sit at this
+// height is gone — the header's own Bookmark icon is the only indicator now
+// — but the pull gesture's live preview still needs this reference.
+const RIBBON_HEADER_HEIGHT_PX = 64;
 const HINT_PIN_INSET = 12;
 const HINT_BOTTOM_GAP = 6;
 
 interface BookmarkPullDownProps {
   bookKey: string;
-  /** Mirror of the resting ribbon's `hoveredBookKey` suppression in BookCell. */
-  ribbonHidden: boolean;
   /** The page-content wrapper this gesture slides down. */
   slideRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
- * Pull-down-to-bookmark (#1359), after the WeRead interaction. Owns all
- * bookmark-ribbon rendering for a book cell: the resting `Ribbon` while idle,
- * and during a pull the slate band, the hint row and the preview ribbon whose
- * fill always shows the state a release would produce.
+ * Pull-down-to-bookmark (#1359), after the WeRead interaction. The bookmark
+ * indicator itself lives only in the header (BookmarkToggler's filled/outline
+ * icon) — this component owns just the pull gesture: the slate band, the
+ * hint row and the preview ribbon whose fill always shows the state a
+ * release would produce.
  *
  * Gesture events arrive through the `bookmarkPullGesture` bridge (capture
  * phase on each section document, registered by `FoliateViewer`). Ownership
@@ -49,10 +52,9 @@ interface BookmarkPullDownProps {
  * slide wrapper / band / hint / preview so only discrete transitions
  * (activation, threshold) re-render.
  */
-const BookmarkPullDown: React.FC<BookmarkPullDownProps> = ({ bookKey, ribbonHidden, slideRef }) => {
+const BookmarkPullDown: React.FC<BookmarkPullDownProps> = ({ bookKey, slideRef }) => {
   const _ = useTranslation();
   const { safeAreaInsets } = useThemeStore();
-  const ribbonVisible = useReaderStore((s) => !!s.viewStates[bookKey]?.ribbonVisible);
 
   const [pulling, setPulling] = useState(false);
   const [pastThreshold, setPastThreshold] = useState(false);
@@ -79,8 +81,8 @@ const BookmarkPullDown: React.FC<BookmarkPullDownProps> = ({ bookKey, ribbonHidd
   const pendingOffsetRef = useRef<number | null>(null);
   const springRafIdRef = useRef<number | null>(null);
 
-  const restHeightRef = useRef(RIBBON_BODY_HEIGHT);
-  restHeightRef.current = (safeAreaInsets?.top || 0) + RIBBON_BODY_HEIGHT;
+  const restHeightRef = useRef(RIBBON_HEADER_HEIGHT_PX);
+  restHeightRef.current = (safeAreaInsets?.top || 0) + RIBBON_HEADER_HEIGHT_PX;
   const pinTopRef = useRef(HINT_PIN_INSET);
   pinTopRef.current = (safeAreaInsets?.top || 0) + HINT_PIN_INSET;
 
@@ -328,50 +330,47 @@ const BookmarkPullDown: React.FC<BookmarkPullDownProps> = ({ bookKey, ribbonHidd
       : _('Pull down to add bookmark');
 
   return (
-    <>
-      {!pulling && ribbonVisible && !ribbonHidden && <Ribbon />}
-      {pulling && (
-        <div className='pointer-events-none absolute inset-0 z-20'>
+    pulling && (
+      <div className='pointer-events-none absolute inset-0 z-20'>
+        <div
+          ref={bandRef}
+          className='bookmark-pull-band absolute left-0 right-0 top-0 overflow-hidden bg-[#6C717A]'
+          style={{ height: 0 }}
+        >
           <div
-            ref={bandRef}
-            className='bookmark-pull-band absolute left-0 right-0 top-0 overflow-hidden bg-[#6C717A]'
-            style={{ height: 0 }}
+            ref={hintRef}
+            className='absolute bottom-1.5 right-12 flex items-center gap-1.5 text-sm text-white/90'
           >
-            <div
-              ref={hintRef}
-              className='absolute bottom-1.5 right-12 flex items-center gap-1.5 text-sm text-white/90'
-            >
-              <RiArrowDownLine
-                aria-hidden
-                className={clsx('transition-transform duration-200', pastThreshold && 'rotate-180')}
-              />
-              <span>{hintText}</span>
-            </div>
-          </div>
-          <div
-            ref={ribbonBoxRef}
-            className='bookmark-pull-ribbon absolute right-0 top-0 flex w-8 justify-center sm:w-6'
-          >
-            <svg
-              ref={svgRef}
-              width='100%'
-              height='0'
-              xmlns='http://www.w3.org/2000/svg'
-              style={{ overflow: 'visible' }}
-              shapeRendering='geometricPrecision'
-            >
-              <polygon
-                ref={polygonRef}
-                fill={filled ? '#F44336' : 'none'}
-                stroke={filled ? 'none' : 'rgba(255,255,255,0.9)'}
-                strokeWidth={filled ? 0 : 2}
-                strokeLinejoin='round'
-              />
-            </svg>
+            <RiArrowDownLine
+              aria-hidden
+              className={clsx('transition-transform duration-200', pastThreshold && 'rotate-180')}
+            />
+            <span>{hintText}</span>
           </div>
         </div>
-      )}
-    </>
+        <div
+          ref={ribbonBoxRef}
+          className='bookmark-pull-ribbon absolute right-0 top-0 flex w-8 justify-center sm:w-6'
+        >
+          <svg
+            ref={svgRef}
+            width='100%'
+            height='0'
+            xmlns='http://www.w3.org/2000/svg'
+            style={{ overflow: 'visible' }}
+            shapeRendering='geometricPrecision'
+          >
+            <polygon
+              ref={polygonRef}
+              fill={filled ? '#F44336' : 'none'}
+              stroke={filled ? 'none' : 'rgba(255,255,255,0.9)'}
+              strokeWidth={filled ? 0 : 2}
+              strokeLinejoin='round'
+            />
+          </svg>
+        </div>
+      </div>
+    )
   );
 };
 

@@ -1,3 +1,7 @@
+export interface BookEditionHistoryItem {
+  version: string;
+}
+
 export interface BookDetail {
   id: string;
   slug: string;
@@ -8,6 +12,9 @@ export interface BookDetail {
   // Versions the book's exclude-word list — fetching it (services/visualible/
   // excludeWords.ts) is skipped entirely when this is 0, per the API contract.
   excludeVersion: number;
+  // Newest edition first. The major version component (before the first '.')
+  // is the edition number shown to readers (e.g. "2.1" -> 2nd Edition).
+  editionHistory?: BookEditionHistoryItem[];
 }
 
 export interface VisualibleSession {

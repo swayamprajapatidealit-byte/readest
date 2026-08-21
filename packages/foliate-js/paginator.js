@@ -1240,6 +1240,14 @@ export class Paginator extends HTMLElement {
     #marginTop = 0
     #marginBottom = 0
     #anchor = 0 // anchor view to a fraction (0-1), Range, or Element
+    // Set externally (setPinnedAnchor) right before a caller-driven resize —
+    // e.g. opening/resizing a split pane right after the user clicked a link
+    // — so the very next reflow keeps THAT exact element in view instead of
+    // #flushScrolledState's generic "whatever's visible" heuristic. A plain
+    // CSS reflow never touches the DOM, so a Range captured at click time
+    // stays perfectly valid; the generic heuristic only approximates "still
+    // roughly the same place", which a big enough reflow can miss.
+    #pinnedAnchor = null
     #justAnchored = false
     #locked = false // while true, prevent any further navigation
     #styles
@@ -1587,6 +1595,12 @@ export class Paginator extends HTMLElement {
     }
     get primaryIndex() {
         return this.#primaryIndex
+    }
+    // See #pinnedAnchor's declaration above. Consumed (and cleared) by the
+    // very next render() — does not itself scroll anything, so it's safe to
+    // call before the resize that will actually trigger that render().
+    setPinnedAnchor(anchor) {
+        this.#pinnedAnchor = anchor
     }
     setAttribute(name, value) {
         // The scrolled-mode scroll handler is debounced, so #anchor and
@@ -1971,14 +1985,23 @@ export class Paginator extends HTMLElement {
         if (this.#views.size === 0) return
         const primaryView = this.#primaryView
         if (!primaryView) return
-        // The scroll listener that keeps #anchor current is debounced up to
-        // ~250ms (see #flushScrolledState's other call site in setAttribute),
-        // so a resize landing inside that window — e.g. opening a split pane
-        // right after scrolling to a link — would otherwise restore a stale
-        // anchor below and scroll the reader away from where they were.
-        // Flush it here, against the pre-resize layout, before that layout
-        // is replaced.
-        this.#flushScrolledState()
+        if (this.#pinnedAnchor) {
+            // A caller pinned an exact anchor for this specific reflow (e.g.
+            // the link just clicked to open/resize a split pane) — use it
+            // once instead of the generic heuristic below, then drop it so
+            // it doesn't leak into the next, unrelated resize.
+            this.#anchor = this.#pinnedAnchor
+            this.#pinnedAnchor = null
+        } else {
+            // The scroll listener that keeps #anchor current is debounced up
+            // to ~250ms (see #flushScrolledState's other call site in
+            // setAttribute), so a resize landing inside that window — e.g.
+            // opening a split pane right after scrolling to a link — would
+            // otherwise restore a stale anchor below and scroll the reader
+            // away from where they were. Flush it here, against the
+            // pre-resize layout, before that layout is replaced.
+            this.#flushScrolledState()
+        }
         this.#stabilizing = true
         const layout = this.#beforeRender({
             vertical: this.#vertical,

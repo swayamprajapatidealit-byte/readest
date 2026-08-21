@@ -4,6 +4,7 @@ import { Book, BookConfig, BookNote } from '@/types/book';
 import { EnvConfigType } from '@/services/environment';
 import { BookDoc } from '@/libs/document';
 import { EbookContent } from '@/services/visualible/ebookContent';
+import { BookDetail } from '@/services/visualible/types';
 import { useLibraryStore } from './libraryStore';
 import { clearEntityViewMemory } from './entityViewMemoryStore';
 
@@ -38,6 +39,31 @@ export const consumePendingEbookContent = (id: string): EbookContent | null => {
     return JSON.parse(raw) as EbookContent;
   } catch (err) {
     console.warn('Failed to consume pending ebook content:', err);
+    return null;
+  }
+};
+
+// Same handoff problem as ebook content above, but for the Visualible book
+// detail (edition history, etc.) fetched in services/visualible/openBook.ts.
+const PENDING_BOOK_DETAIL_PREFIX = 'pendingBookDetail:';
+
+const stashPendingBookDetail = (id: string, detail: BookDetail): void => {
+  try {
+    sessionStorage.setItem(PENDING_BOOK_DETAIL_PREFIX + id, JSON.stringify(detail));
+  } catch (err) {
+    console.warn('Failed to stash pending book detail:', err);
+  }
+};
+
+export const consumePendingBookDetail = (id: string): BookDetail | null => {
+  const key = PENDING_BOOK_DETAIL_PREFIX + id;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    sessionStorage.removeItem(key);
+    return JSON.parse(raw) as BookDetail;
+  } catch (err) {
+    console.warn('Failed to consume pending book detail:', err);
     return null;
   }
 };
@@ -78,6 +104,7 @@ export interface BookData {
   isFixedLayout: boolean;
   /* Transient, in-memory only — never persisted or synced */
   ebookContent: EbookContent | null;
+  bookDetail: BookDetail | null;
 }
 
 interface BookDataState {
@@ -94,6 +121,7 @@ interface BookDataState {
   getBookData: (keyOrId: string) => BookData | null;
   clearBookData: (keyOrId: string) => void;
   setEbookContent: (keyOrId: string, content: EbookContent) => void;
+  setBookDetail: (keyOrId: string, detail: BookDetail) => void;
 }
 
 /**
@@ -143,6 +171,22 @@ export const useBookDataStore = create<BookDataState>((set, get) => ({
         booksData: {
           ...state.booksData,
           [id]: { ...existing, ebookContent: content },
+        },
+      };
+    });
+  },
+  setBookDetail: (keyOrId: string, detail: BookDetail) => {
+    const id = keyOrId.split('-')[0]!;
+    set((state) => {
+      const existing = state.booksData[id];
+      if (!existing) {
+        stashPendingBookDetail(id, detail);
+        return state;
+      }
+      return {
+        booksData: {
+          ...state.booksData,
+          [id]: { ...existing, bookDetail: detail },
         },
       };
     });

@@ -46,6 +46,11 @@ export interface Renderer extends HTMLElement {
   primaryIndex: number;
   getContents: () => { doc: Document; index?: number; overlayer?: unknown }[];
   scrollToAnchor?: (anchor: number | Range, reason?: string, smooth?: boolean) => void;
+  // Pins the exact anchor the very next reflow (ResizeObserver-triggered
+  // render()) should restore, instead of its generic "whatever's visible"
+  // heuristic — see paginator.js's #pinnedAnchor for why this matters for a
+  // caller-driven resize (e.g. opening a split view) right after a click.
+  setPinnedAnchor?: (anchor: Range) => void;
   addEventListener: (
     type: string,
     listener: EventListener,

@@ -8,6 +8,16 @@ export const randomMd5 = () => md5(Math.random().toString());
 
 export const getContentMd5 = (content: unknown) => md5(JSON.stringify(content));
 
+// 1 -> '1st', 2 -> '2nd', 3 -> '3rd', 11-13 -> 'th' (the "teens" exception).
+export const getOrdinal = (n: number): string => {
+  const remainder10 = n % 10;
+  const remainder100 = n % 100;
+  if (remainder10 === 1 && remainder100 !== 11) return `${n}st`;
+  if (remainder10 === 2 && remainder100 !== 12) return `${n}nd`;
+  if (remainder10 === 3 && remainder100 !== 13) return `${n}rd`;
+  return `${n}th`;
+};
+
 export const makeSafeFilename = (filename: string, replacement = '_') => {
   // Windows restricted characters + control characters and reserved names
   const unsafeCharacters = /[<>:%#"\/\\|?*\x00-\x1F]/g;

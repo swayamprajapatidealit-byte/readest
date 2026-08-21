@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 
 import type { Insets } from '@/types/misc';
 import { useThemeStore } from '@/store/themeStore';
@@ -17,7 +17,9 @@ import SectionInfo from './SectionInfo';
 import HeaderBar from './HeaderBar';
 import PageNavigationButtons from './PageNavigationButtons';
 import FooterBar from './footerbar/FooterBar';
-import ProgressBar from './ProgressBar';
+// ProgressBar (remaining time/pages, sticky bar, clock/battery) is disabled
+// for now — commented out below, to be reinstated later.
+// import ProgressBar from './ProgressBar';
 import BookmarkPullDown from './BookmarkPullDown';
 import Annotator from './annotator/Annotator';
 import FootnotePopup from './FootnotePopup';
@@ -67,9 +69,6 @@ interface BookCellProps {
   gridInsets: Insets;
   screenInsets: Insets;
   isHoveredAnim: boolean;
-  hoveredBookKey: string | null;
-  isDropdownOpen: boolean;
-  setDropdownOpenForBook: (bookKey: string, isOpen: boolean) => void;
   onCloseBook: (bookKey: string) => void;
   // True while a split-view divider drag is being committed and this pane's
   // content is re-paginating for its new width (see useSplitDividerResize).
@@ -81,9 +80,6 @@ const BookCellInner: React.FC<BookCellProps> = ({
   gridInsets,
   screenInsets,
   isHoveredAnim,
-  hoveredBookKey,
-  isDropdownOpen,
-  setDropdownOpenForBook,
   onCloseBook,
   isResizingSplit,
 }) => {
@@ -125,16 +121,9 @@ const BookCellInner: React.FC<BookCellProps> = ({
   // bookmark gesture slides as one block.
   const slideRef = useRef<HTMLDivElement | null>(null);
 
-  // Stable callback so HeaderBar doesn't see a new prop reference per
-  // BooksGrid render.
-  const onDropdownOpenChange = useCallback(
-    (isOpen: boolean) => setDropdownOpenForBook(bookKey, isOpen),
-    [bookKey, setDropdownOpenForBook],
-  );
-
   if (!book || !config || !bookDoc || !viewSettings || !viewState) return null;
 
-  const { section, pageinfo, sectionLabel } = progress || {};
+  const { sectionLabel } = progress || {};
   const viewerKey = viewState.viewerKey;
   const horizontalGapPercent = viewSettings.gapPercent;
   const showHeader = viewSettings.showHeader;
@@ -156,7 +145,6 @@ const BookCellInner: React.FC<BookCellProps> = ({
         bookTitle={book.title}
         isHoveredAnim={isHoveredAnim}
         onCloseBook={onCloseBook}
-        onDropdownOpenChange={onDropdownOpenChange}
       />
       {/*
         bg-base-100: while the pull-down bookmark gesture translates this
@@ -243,28 +231,22 @@ const BookCellInner: React.FC<BookCellProps> = ({
             gridInsets={gridInsets}
           />
         )}
-        {showFooter && (
+        {/* {showFooter && (
           <ProgressBar
             bookKey={bookKey}
             horizontalGap={horizontalGapPercent}
             contentInsets={contentInsets}
             gridInsets={gridInsets}
           />
-        )}
+        )} */}
       </div>
-      <BookmarkPullDown bookKey={bookKey} ribbonHidden={!!hoveredBookKey} slideRef={slideRef} />
-      <PageNavigationButtons bookKey={bookKey} isDropdownOpen={isDropdownOpen} />
+      <BookmarkPullDown bookKey={bookKey} slideRef={slideRef} />
+      <PageNavigationButtons bookKey={bookKey} />
       <Annotator bookKey={bookKey} contentInsets={contentInsets} />
       <SearchResultsNav bookKey={bookKey} gridInsets={gridInsets} />
       <BooknotesNav bookKey={bookKey} gridInsets={gridInsets} toc={bookDoc.toc || []} />
       <FootnotePopup bookKey={bookKey} bookDoc={bookDoc} />
-      <FooterBar
-        bookKey={bookKey}
-        section={section}
-        pageinfo={pageinfo}
-        isHoveredAnim={false}
-        gridInsets={gridInsets}
-      />
+      <FooterBar bookKey={bookKey} gridInsets={gridInsets} />
       <ReadingStatsTracker bookKey={bookKey} />
       {/*
         Committing a divider drag resizes this pane, which forces the epub
@@ -287,15 +269,12 @@ const BookCell = React.memo(BookCellInner);
 
 const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
   const _ = useTranslation();
-  // Per-field selectors — see store/readerProgressStore.ts header. The grid
-  // only re-renders on hoveredBookKey changes (header/footer toggle);
+  // Per-field selectors — see store/readerProgressStore.ts header.
   // setGridInsets is a stable action ref.
-  const hoveredBookKey = useReaderStore((s) => s.hoveredBookKey);
   const setGridInsets = useReaderStore((s) => s.setGridInsets);
   const splitMainPaneFraction = useReaderStore((s) => s.splitMainPaneFraction);
   const getBookData = useBookDataStore((s) => s.getBookData);
   const sideBarBookKey = useSidebarStore((s) => s.sideBarBookKey);
-  const [dropdownOpenBook, setDropdownOpenBook] = useState<string>('');
 
   const { safeAreaInsets: screenInsets } = useThemeStore();
   const aspectRatio = window.innerWidth / window.innerHeight;
@@ -357,12 +336,6 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookKeys, screenInsets, perBookGridInsets]);
 
-  // Stable cross-cell setter for the dropdown bookkeeping — used by the
-  // memoized onDropdownOpenChange callback inside each BookCell.
-  const setDropdownOpenForBook = useCallback((bookKey: string, isOpen: boolean) => {
-    setDropdownOpenBook(isOpen ? bookKey : '');
-  }, []);
-
   if (!screenInsets) return null;
 
   const gridStyle = {
@@ -387,9 +360,6 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
             gridInsets={perBookGridInsets[0]!}
             screenInsets={screenInsets}
             isHoveredAnim={isHoveredAnim}
-            hoveredBookKey={hoveredBookKey}
-            isDropdownOpen={dropdownOpenBook === bookKeys[0]}
-            setDropdownOpenForBook={setDropdownOpenForBook}
             onCloseBook={onCloseBook}
             isResizingSplit={isResizing}
           />
@@ -405,9 +375,6 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
             gridInsets={perBookGridInsets[1]!}
             screenInsets={screenInsets}
             isHoveredAnim={isHoveredAnim}
-            hoveredBookKey={hoveredBookKey}
-            isDropdownOpen={dropdownOpenBook === bookKeys[1]}
-            setDropdownOpenForBook={setDropdownOpenForBook}
             onCloseBook={onCloseBook}
             isResizingSplit={isResizing}
           />
@@ -429,9 +396,6 @@ const BooksGrid: React.FC<BooksGridProps> = ({ bookKeys, onCloseBook }) => {
             gridInsets={perBookGridInsets[index]!}
             screenInsets={screenInsets}
             isHoveredAnim={isHoveredAnim}
-            hoveredBookKey={hoveredBookKey}
-            isDropdownOpen={dropdownOpenBook === bookKey}
-            setDropdownOpenForBook={setDropdownOpenForBook}
             onCloseBook={onCloseBook}
           />
         ))

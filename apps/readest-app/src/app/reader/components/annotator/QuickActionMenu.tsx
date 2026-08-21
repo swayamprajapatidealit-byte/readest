@@ -47,11 +47,7 @@ const QuickActionMenu: React.FC<QuickActionMenuProps> = ({
 
   return (
     <Menu
-      className={clsx(
-        'annotation-quick-action-menu dropdown-content z-20 mt-1.5 border',
-        'bgcolor-base-200 shadow-2xl',
-        menuClassName,
-      )}
+      className={clsx('annotation-quick-action-menu', menuClassName)}
       onCancel={() => setIsDropdownOpen?.(false)}
     >
       {annotationToolQuickActions.map((button) => (

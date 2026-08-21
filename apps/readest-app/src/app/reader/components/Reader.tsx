@@ -15,6 +15,7 @@ import { AboutWindow } from '@/components/AboutWindow';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { ProofreadRulesManager } from './ProofreadRules';
 import { Toast } from '@/components/Toast';
+import BrightnessOverlay from './BrightnessOverlay';
 import { getLocale } from '@/utils/misc';
 import { initDayjs } from '@/utils/time';
 import ReaderContent from './ReaderContent';
@@ -22,6 +23,8 @@ import ReaderContent from './ReaderContent';
 /*
 Z-Index Layering Guide:
 ---------------------------------
+100 – Brightness Overlay
+     • Simulated screen dimming; pointer-events-none so it never blocks input.
 99 – Window Border (Linux only)
      • Ensures the border stays on top of all UI elements.
 50 – Loading Progress / Toast Notifications / Dialogs / Popups
@@ -64,6 +67,7 @@ const Reader: React.FC<{ ids?: string }> = ({ ids }) => {
         <KeyboardShortcutsHelp />
         <ProofreadRulesManager />
         <Toast />
+        <BrightnessOverlay />
       </Suspense>
     </div>
   ) : (

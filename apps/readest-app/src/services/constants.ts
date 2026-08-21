@@ -264,7 +264,6 @@ export const DEFAULT_VIEW_CONFIG: ViewConfig = {
   showCurrentBatteryStatus: false,
   showBatteryPercentage: true,
   use24HourClock: false,
-  showPaginationButtons: false,
   progressStyle: 'fraction',
   referencePageCount: 0,
 
@@ -735,6 +734,12 @@ export const CHECK_UPDATE_INTERVAL_SEC = 24 * 60 * 60;
 export const MAX_ZOOM_LEVEL = 500;
 export const MIN_ZOOM_LEVEL = 50;
 export const ZOOM_STEP = 10;
+
+// Header "zoom" for reflowable books — actually steps `defaultFontSize` up/down
+// (fixed-layout books use the real zoomLevel above instead).
+export const MAX_FONT_ZOOM_SIZE = 120;
+export const MIN_FONT_ZOOM_SIZE = 8;
+export const FONT_ZOOM_STEP = 2;
 
 export const MAX_CONTRAST = 300;
 export const MIN_CONTRAST = 50;

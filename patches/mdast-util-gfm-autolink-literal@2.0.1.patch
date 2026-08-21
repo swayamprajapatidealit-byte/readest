@@ -1,4 +1,4 @@
-diff --git a/lib/index.js b/lib/index.js
+addiff --git a/lib/index.js b/lib/index.js
 index c5ca771c24dd914e342f791716a822431ee32b3a..10279f146a893211cd94e97107bcd50c1352d068 100644
 --- a/lib/index.js
 +++ b/lib/index.js

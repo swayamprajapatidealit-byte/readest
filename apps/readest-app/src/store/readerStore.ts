@@ -19,6 +19,7 @@ import { SUPPORTED_LANGNAMES } from '@/services/constants';
 import { useSettingsStore } from './settingsStore';
 import {
   BookData,
+  consumePendingBookDetail,
   consumePendingBookDoc,
   consumePendingEbookContent,
   useBookDataStore,
@@ -301,6 +302,10 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
         consumePendingEbookContent(id) ??
         useBookDataStore.getState().booksData[id]?.ebookContent ??
         null;
+      const bookDetail =
+        consumePendingBookDetail(id) ??
+        useBookDataStore.getState().booksData[id]?.bookDetail ??
+        null;
       const newBookData: BookData = {
         id,
         book,
@@ -309,6 +314,7 @@ export const useReaderStore = create<ReaderStore>((set, get) => ({
         bookDoc,
         isFixedLayout,
         ebookContent,
+        bookDetail,
       };
       useBookDataStore.setState((state) => ({
         booksData: {

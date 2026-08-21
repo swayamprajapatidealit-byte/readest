@@ -27,7 +27,7 @@ const BookmarkToggler: React.FC<BookmarkTogglerProps> = ({ bookKey }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const config = getConfig(bookKey);
   const progress = getProgress(bookKey);
-  const iconSize18 = useResponsiveSize(18);
+  const iconSize20 = useResponsiveSize(20);
 
   const toggleBookmark = () => {
     const bookData = getBookData(bookKey);
@@ -114,9 +114,9 @@ const BookmarkToggler: React.FC<BookmarkTogglerProps> = ({ bookKey }) => {
     <Button
       icon={
         isBookmarked ? (
-          <RiBookmarkFill className='text-base-content' size={iconSize18} />
+          <RiBookmarkFill className='text-base-content' size={iconSize20} />
         ) : (
-          <RiBookmarkLine className='text-base-content' size={iconSize18} />
+          <RiBookmarkLine className='text-base-content' size={iconSize20} />
         )
       }
       onClick={toggleBookmark}

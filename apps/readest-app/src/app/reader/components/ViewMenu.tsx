@@ -66,15 +66,6 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
   const [invertImgColorInDark, setInvertImgColorInDark] = useState(
     viewSettings!.invertImgColorInDark,
   );
-  const [entityIconsCharactersEnabled, setEntityIconsCharactersEnabled] = useState(
-    viewSettings!.entityIconsCharactersEnabled ?? true,
-  );
-  const [entityIconsPlacesEnabled, setEntityIconsPlacesEnabled] = useState(
-    viewSettings!.entityIconsPlacesEnabled ?? true,
-  );
-  const [entityIconsGlossaryEnabled, setEntityIconsGlossaryEnabled] = useState(
-    viewSettings!.entityIconsGlossaryEnabled ?? true,
-  );
   const zoomIn = () => setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM_LEVEL));
   const zoomOut = () => setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM_LEVEL));
   const resetZoom = () => setZoomLevel(100);
@@ -180,52 +171,6 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invertImgColorInDark]);
 
-  // skipGlobal: true — like Zoom/Contrast/Invert Image above, this applies only
-  // to this exact pane's bookKey, not every open pane/book. A split-view pane
-  // of the same book gets its own independent on/off, matching its own
-  // separate ViewSettings object rather than the (default-on) global sync.
-  useEffect(() => {
-    if (entityIconsCharactersEnabled === viewSettings.entityIconsCharactersEnabled) return;
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'entityIconsCharactersEnabled',
-      entityIconsCharactersEnabled,
-      true,
-      false,
-    );
-    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityIconsCharactersEnabled]);
-
-  useEffect(() => {
-    if (entityIconsPlacesEnabled === viewSettings.entityIconsPlacesEnabled) return;
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'entityIconsPlacesEnabled',
-      entityIconsPlacesEnabled,
-      true,
-      false,
-    );
-    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityIconsPlacesEnabled]);
-
-  useEffect(() => {
-    if (entityIconsGlossaryEnabled === viewSettings.entityIconsGlossaryEnabled) return;
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'entityIconsGlossaryEnabled',
-      entityIconsGlossaryEnabled,
-      true,
-      false,
-    );
-    eventDispatcher.dispatch('entity-icon-settings-changed', { bookKey });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityIconsGlossaryEnabled]);
-
   useEffect(() => {
     if (zoomMode === viewSettings.zoomMode) return;
     viewSettings.zoomMode = zoomMode;
@@ -257,13 +202,7 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
   }, [keepCoverSpread]);
 
   return (
-    <Menu
-      className={clsx(
-        'view-menu dropdown-content dropdown-right no-triangle z-20 mt-1.5 border',
-        'bgcolor-base-200 shadow-2xl',
-      )}
-      onCancel={() => setIsDropdownOpen?.(false)}
-    >
+    <Menu className='view-menu' onCancel={() => setIsDropdownOpen?.(false)}>
       {bookData.bookDoc?.rendition?.layout === 'pre-paginated' && (
         <>
           <div
@@ -485,28 +424,6 @@ const ViewMenu: React.FC<ViewMenuProps> = ({ bookKey, setIsDropdownOpen }) => {
         Icon={invertImgColorInDark ? MdCheck : undefined}
         onClick={() => setInvertImgColorInDark(!invertImgColorInDark)}
       />
-
-      <hr aria-hidden='true' className='border-base-300 my-1' />
-
-      <MenuItem label={_('Entity Icons')}>
-        <ul className='max-h-60 overflow-y-auto'>
-          <MenuItem
-            label={_('Characters')}
-            toggled={entityIconsCharactersEnabled}
-            onClick={() => setEntityIconsCharactersEnabled(!entityIconsCharactersEnabled)}
-          />
-          <MenuItem
-            label={_('Places')}
-            toggled={entityIconsPlacesEnabled}
-            onClick={() => setEntityIconsPlacesEnabled(!entityIconsPlacesEnabled)}
-          />
-          <MenuItem
-            label={_('Glossary')}
-            toggled={entityIconsGlossaryEnabled}
-            onClick={() => setEntityIconsGlossaryEnabled(!entityIconsGlossaryEnabled)}
-          />
-        </ul>
-      </MenuItem>
     </Menu>
   );
 };

@@ -42,9 +42,6 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
   const [noContinuousScroll, setNoContinuousScroll] = useState(viewSettings.noContinuousScroll);
   const [scrollingOverlap, setScrollingOverlap] = useState(viewSettings.scrollingOverlap);
   const [hideScrollbar, setHideScrollbar] = useState(viewSettings.hideScrollbar || false);
-  const [showPaginationButtons, setShowPaginationButtons] = useState(
-    viewSettings.showPaginationButtons,
-  );
   const [isDisableClick, setIsDisableClick] = useState(viewSettings.disableClick);
   const [isDisableSwipe, setIsDisableSwipe] = useState(viewSettings.disableSwipe);
   const [fullscreenClickArea, setFullscreenClickArea] = useState(viewSettings.fullscreenClickArea);
@@ -90,7 +87,6 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
       noContinuousScroll: setNoContinuousScroll,
       scrollingOverlap: setScrollingOverlap,
       hideScrollbar: setHideScrollbar,
-      showPaginationButtons: setShowPaginationButtons,
       disableClick: setIsDisableClick,
       disableSwipe: setIsDisableSwipe,
       swapClickArea: setSwapClickArea,
@@ -157,18 +153,6 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
     saveViewSettings(envConfig, bookKey, 'scrollingOverlap', scrollingOverlap, false, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollingOverlap]);
-
-  useEffect(() => {
-    saveViewSettings(
-      envConfig,
-      bookKey,
-      'showPaginationButtons',
-      showPaginationButtons,
-      false,
-      false,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showPaginationButtons]);
 
   useEffect(() => {
     saveViewSettings(envConfig, bookKey, 'disableClick', isDisableClick, false, false);
@@ -385,12 +369,6 @@ const ControlPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRes
           checked={isDisableDoubleClick}
           onChange={() => setIsDisableDoubleClick(!isDisableDoubleClick)}
           data-setting-id='settings.control.disableDoubleClick'
-        />
-        <SettingsSwitchRow
-          label={_('Show Page Navigation Buttons')}
-          checked={showPaginationButtons}
-          onChange={() => setShowPaginationButtons(!showPaginationButtons)}
-          data-setting-id='settings.control.showPaginationButtons'
         />
       </BoxedList>
 

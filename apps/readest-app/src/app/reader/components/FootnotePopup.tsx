@@ -296,6 +296,17 @@ const FootnotePopup: React.FC<FootnotePopupProps> = ({ bookKey, bookDoc }) => {
         goToCfiWhenReady(otherKey, detail.href);
         return;
       }
+      // Pin the clicked link itself as this pane's next reflow anchor —
+      // opening the split is about to resize (and re-paginate) this pane,
+      // and the generic "whatever's visible" anchor the engine falls back to
+      // is only a coarse proxy for "stay roughly in place". A big enough
+      // resize (e.g. squeezing the main pane down to 70%) can still push the
+      // exact clicked link off the newly re-paginated page even though that
+      // proxy range gets restored correctly. Nothing about a CSS reflow
+      // touches the DOM, so a Range on the link itself stays valid for free.
+      const linkRange = linkAnchor.ownerDocument.createRange();
+      linkRange.selectNode(linkAnchor);
+      view?.renderer.setPinnedAnchor?.(linkRange);
       // Give the main pane the bigger share (70/30) when this is the first
       // pane opening a split, so the content the reader was looking at stays
       // in view instead of being squeezed by an even 50/50 split.

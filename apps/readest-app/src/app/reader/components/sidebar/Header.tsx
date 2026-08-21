@@ -1,12 +1,14 @@
 import clsx from 'clsx';
 import React, { useRef } from 'react';
 import { FiSearch } from 'react-icons/fi';
-import { MdOutlineMenu, MdOutlinePushPin, MdPushPin } from 'react-icons/md';
+import { MdOutlinePushPin, MdPushPin } from 'react-icons/md';
 import { MdArrowBackIosNew } from 'react-icons/md';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useResponsiveSize } from '@/hooks/useResponsiveSize';
-import Dropdown from '@/components/Dropdown';
-import BookMenu from './BookMenu';
+// Book Menu button is commented out for now (UI only) — see the JSX below.
+// import { MdOutlineMenu } from 'react-icons/md';
+// import Dropdown from '@/components/Dropdown';
+// import BookMenu from './BookMenu';
 import SidebarToggler from '../SidebarToggler';
 
 const SidebarHeader: React.FC<{
@@ -52,6 +54,7 @@ const SidebarHeader: React.FC<{
         >
           <FiSearch size={iconSize18} className='text-base-content' />
         </button>
+        {/* Book Menu button — commented out for now, to be reinstated later.
         <Dropdown
           label={_('Book Menu')}
           showTooltip={false}
@@ -66,6 +69,7 @@ const SidebarHeader: React.FC<{
         >
           <BookMenu />
         </Dropdown>
+        */}
         <div className='right-0 hidden h-8 w-8 items-center justify-center sm:flex'>
           <button
             title={isPinned ? _('Unpin Sidebar') : _('Pin Sidebar')}
