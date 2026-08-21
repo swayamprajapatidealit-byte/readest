@@ -1,7 +1,15 @@
 import React, { useRef } from 'react';
-import { MdStar, MdPerson, MdLocationOn, MdMenuBook, MdStickyNote2 } from 'react-icons/md';
+import {
+  MdStar,
+  MdPerson,
+  MdLocationOn,
+  MdMenuBook,
+  MdStickyNote2,
+  MdChevronRight,
+} from 'react-icons/md';
 
 import { useTranslation } from '@/hooks/useTranslation';
+import { useResponsiveSize } from '@/hooks/useResponsiveSize';
 import type {
   Citation,
   CharacterEntity,
@@ -100,6 +108,7 @@ const FactSection: React.FC<{
   openedSeenIds: Set<string>;
 }> = ({ title, facts, openedSeenIds }) => {
   const _ = useTranslation();
+  const chevronSize = useResponsiveSize(14);
   if (facts.length === 0) return null;
   const fresh = facts.filter(({ id }) => !openedSeenIds.has(id));
   const seen = facts.filter(({ id }) => openedSeenIds.has(id));
@@ -111,20 +120,24 @@ const FactSection: React.FC<{
       {fresh.length > 0 && (
         <ul className='space-y-2.5 text-base'>
           {fresh.map(({ fact, id }) => (
-            <li key={id} className='border-primary/30 border-l-2 pl-3'>
+            <li key={id} className='border-primary/30 border-s-2 ps-3'>
               {fact.text}
             </li>
           ))}
         </ul>
       )}
       {seen.length > 0 && (
-        <details className={fresh.length > 0 ? 'mt-2' : undefined} open={fresh.length === 0}>
-          <summary className='text-base-content/50 cursor-pointer text-xs font-medium select-none'>
+        <details className={fresh.length > 0 ? 'group mt-2' : 'group'} open={fresh.length === 0}>
+          <summary className='text-base-content/50 flex cursor-pointer items-center gap-1 text-xs font-medium select-none [&::-webkit-details-marker]:hidden'>
+            <MdChevronRight
+              size={chevronSize}
+              className='shrink-0 transition-transform duration-150 group-open:rotate-90'
+            />
             {_('Previously seen ({{count}})', { count: seen.length })}
           </summary>
           <ul className='mt-2 space-y-2.5 text-base'>
             {seen.map(({ fact, id }) => (
-              <li key={id} className='border-base-content/20 pl-3 opacity-70 border-l-2'>
+              <li key={id} className='border-base-content/20 border-s-2 ps-3 opacity-70'>
                 {fact.text}
               </li>
             ))}
@@ -137,6 +150,7 @@ const FactSection: React.FC<{
 
 const CitationsList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
   const _ = useTranslation();
+  const starSize = useResponsiveSize(14);
   const withUrl = citations.filter((citation) => citation.url);
   if (withUrl.length === 0) return null;
   return (
@@ -147,7 +161,7 @@ const CitationsList: React.FC<{ citations: Citation[] }> = ({ citations }) => {
       <ul className='space-y-1.5 text-base'>
         {withUrl.map((citation, i) => (
           <li key={i} className='flex items-start gap-1.5'>
-            <MdStar className='text-primary mt-1 shrink-0' size={14} />
+            <MdStar className='text-primary mt-1 shrink-0' size={starSize} />
             <a href={citation.url} target='_blank' rel='noreferrer' className='link link-primary'>
               {citation.title}
             </a>
@@ -165,6 +179,7 @@ export const CharacterContent: React.FC<{
   progressFraction: number;
 }> = ({ entity, entityIndex, bookKey, progressFraction }) => {
   const _ = useTranslation();
+  const iconSize = useResponsiveSize(18);
   const bookId = bookKey.split('-')[0]!;
   const entityKey = `character:${entityIndex}`;
   const memory = useEntityViewMemory(bookId, entityKey);
@@ -199,7 +214,7 @@ export const CharacterContent: React.FC<{
   return (
     <div>
       <EntityHeader
-        icon={<MdPerson size={18} />}
+        icon={<MdPerson size={iconSize} />}
         kicker={_('Person')}
         title={entity.name}
         badge={entity.character_type}
@@ -213,7 +228,7 @@ export const CharacterContent: React.FC<{
       )}
       <AlternativeNames names={entity.alternative_names} />
       {showIntro && (
-        <p className='border-primary/30 mb-5 border-l-2 pl-3 text-base'>
+        <p className='border-primary/30 mb-5 border-s-2 ps-3 text-base'>
           {entity.introduction.text}
         </p>
       )}
@@ -237,6 +252,7 @@ export const PlaceContent: React.FC<{
   progressFraction: number;
 }> = ({ entity, entityIndex, bookKey, progressFraction }) => {
   const _ = useTranslation();
+  const iconSize = useResponsiveSize(18);
   const bookId = bookKey.split('-')[0]!;
   const entityKey = `place:${entityIndex}`;
   const memory = useEntityViewMemory(bookId, entityKey);
@@ -255,28 +271,28 @@ export const PlaceContent: React.FC<{
   return (
     <div>
       <EntityHeader
-        icon={<MdLocationOn size={18} />}
+        icon={<MdLocationOn size={iconSize} />}
         kicker={_('Place')}
         title={entity.name}
         badge={entity.type || undefined}
       />
       <AlternativeNames names={entity.alternative_names} />
       {entity.geography && (
-        <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>{entity.geography}</p>
+        <p className='border-primary/30 mb-4 border-s-2 ps-3 text-base'>{entity.geography}</p>
       )}
       {entity.historical_context && (
-        <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>
+        <p className='border-primary/30 mb-4 border-s-2 ps-3 text-base'>
           {entity.historical_context}
         </p>
       )}
       <FactSection title={_('Facts')} facts={facts} openedSeenIds={openedSeenIds} />
       {showNarrative && entity.role_in_narrative && (
-        <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>
+        <p className='border-primary/30 mb-4 border-s-2 ps-3 text-base'>
           {entity.role_in_narrative}
         </p>
       )}
       {showNarrative && entity.significance_in_book && (
-        <p className='border-primary/30 mb-4 border-l-2 pl-3 text-base'>
+        <p className='border-primary/30 mb-4 border-s-2 ps-3 text-base'>
           {entity.significance_in_book}
         </p>
       )}
@@ -287,16 +303,17 @@ export const PlaceContent: React.FC<{
 
 export const GlossaryContent: React.FC<{ entity: GlossaryEntity }> = ({ entity }) => {
   const _ = useTranslation();
+  const iconSize = useResponsiveSize(18);
   return (
     <div>
       <EntityHeader
-        icon={<MdMenuBook size={18} />}
+        icon={<MdMenuBook size={iconSize} />}
         kicker={_('Term')}
         title={entity.term}
         badge={_('{{source}} definition', { source: entity.definition_source })}
       />
       {entity.general_definition && (
-        <p className='border-primary/30 mb-5 border-l-2 pl-3 text-base'>
+        <p className='border-primary/30 mb-5 border-s-2 ps-3 text-base'>
           {entity.general_definition.text}
         </p>
       )}
@@ -307,7 +324,7 @@ export const GlossaryContent: React.FC<{ entity: GlossaryEntity }> = ({ entity }
           </h3>
           <ul className='space-y-2.5 text-base'>
             {entity.contextual_definition.map((definition, i) => (
-              <li key={i} className='border-primary/30 border-l-2 pl-3'>
+              <li key={i} className='border-primary/30 border-s-2 ps-3'>
                 {definition.text}
               </li>
             ))}
@@ -322,7 +339,7 @@ export const GlossaryContent: React.FC<{ entity: GlossaryEntity }> = ({ entity }
           {/* Distinct accent (accent, not primary) — signals this reading diverges
               from the general definition above, so it deliberately doesn't share
               the same color as every other block. Still theme-reactive. */}
-          <p className='border-accent/60 text-base-content border-l-2 pl-3 text-base'>
+          <p className='border-accent/60 text-base-content border-s-2 ps-3 text-base'>
             {entity.specific_usage_or_shift.text}
           </p>
         </section>
@@ -334,14 +351,15 @@ export const GlossaryContent: React.FC<{ entity: GlossaryEntity }> = ({ entity }
 
 export const FootnoteContent: React.FC<{ entity: FootnoteEntity }> = ({ entity }) => {
   const _ = useTranslation();
+  const iconSize = useResponsiveSize(18);
   return (
     <div>
       <EntityHeader
-        icon={<MdStickyNote2 size={18} />}
+        icon={<MdStickyNote2 size={iconSize} />}
         kicker={_('End Note')}
         title={entity.source_label}
       />
-      <p className='border-primary/30 border-l-2 pl-3 text-base'>{entity.target}</p>
+      <p className='border-primary/30 border-s-2 ps-3 text-base'>{entity.target}</p>
     </div>
   );
 };

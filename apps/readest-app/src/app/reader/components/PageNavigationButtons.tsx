@@ -10,13 +10,20 @@ import { useBookDataStore } from '@/store/bookDataStore';
 
 interface PageNavigationButtonsProps {
   bookKey: string;
+  isDropdownOpen: boolean;
 }
 
-const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({ bookKey }) => {
+const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({
+  bookKey,
+  isDropdownOpen,
+}) => {
   const _ = useTranslation();
   const getBookData = useBookDataStore((s) => s.getBookData);
   const getView = useReaderStore((s) => s.getView);
   const getViewSettings = useReaderStore((s) => s.getViewSettings);
+  // Reactive — drives button visibility so they only appear on hover instead
+  // of floating over the page content at all times.
+  const hoveredBookKey = useReaderStore((s) => s.hoveredBookKey);
   const bookData = getBookData(bookKey);
   const view = getView(bookKey);
   const viewSettings = getViewSettings(bookKey);
@@ -26,6 +33,8 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({ bookKey }
   const { section, pageinfo } = progress || {};
   const pageInfo = bookData?.isFixedLayout ? section : pageinfo;
   const currentPage = pageInfo?.current;
+
+  const isPageNavigationButtonsVisible = hoveredBookKey === bookKey || isDropdownOpen;
 
   const handleGoLeftPage = useCallback(() => {
     viewPagination(view, viewSettings, 'left', 'page');
@@ -75,7 +84,14 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({ bookKey }
         </div>
       )}
 
-      <div className='absolute left-2 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1'>
+      <div
+        className={clsx(
+          'absolute left-2 flex -translate-y-1/2 flex-col items-center gap-1',
+          isPageNavigationButtonsVisible
+            ? 'top-1/2 opacity-100'
+            : 'bottom-2 opacity-0 pointer-events-none',
+        )}
+      >
         <button
           onClick={handleGoLeftSection}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
@@ -112,7 +128,14 @@ const PageNavigationButtons: React.FC<PageNavigationButtonsProps> = ({ bookKey }
         </button>
       </div>
 
-      <div className='absolute right-2 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1'>
+      <div
+        className={clsx(
+          'absolute right-2 flex -translate-y-1/2 flex-col items-center gap-1',
+          isPageNavigationButtonsVisible
+            ? 'top-1/2 opacity-100'
+            : 'bottom-2 opacity-0 pointer-events-none',
+        )}
+      >
         <button
           onClick={handleGoRightPage}
           className='flex h-20 w-20 items-center justify-center focus:outline-none'
