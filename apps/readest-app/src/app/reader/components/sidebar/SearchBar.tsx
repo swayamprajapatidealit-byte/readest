@@ -262,9 +262,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ isVisible, bookKey, onHideSearchB
                   : code === 'FUZZY_QUERY_TOO_LONG'
                     ? _('Search query is too long')
                     : _('Search failed');
-            if (event.type === 'book-error' && !code) {
-              console.error('search failed:', event.error);
-            }
+            // book-skipped ('unavailable') previously logged nothing at all,
+            // and a code-less book-error only logged the bare message — log
+            // every failure branch with full context so "Search failed" is
+            // diagnosable from the console instead of a dead end.
+            console.error('[search] book failed:', {
+              bookKey,
+              term,
+              eventType: event.type,
+              book: event.book.title || event.book.hash,
+              code,
+              reason: event.type === 'book-skipped' ? event.reason : undefined,
+              error: event.type === 'book-error' ? event.error : undefined,
+            });
             setSearchError(bookKey, message);
             setSearchResults(bookKey, []);
             setSearchStatus(bookKey, 'completed');
@@ -292,7 +302,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ isVisible, bookKey, onHideSearchB
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        console.error('search failed:', err);
+        console.error('[search] threw outside book loop:', { bookKey, term, error: err });
         setSearchError(bookKey, _('Search failed'));
         setSearchResults(bookKey, []);
         setSearchStatus(bookKey, 'completed');

@@ -41,7 +41,7 @@ type LibrarySearchAppService = Pick<
   AppService,
   | 'databaseExists'
   | 'deleteDatabase'
-  | 'getBookFileSize'
+  | 'isBookAvailable'
   | 'loadBookContent'
   | 'resolveNativeBookFilePath'
   | 'loadBookNav'
@@ -590,10 +590,15 @@ export async function* searchLibraryBooks(
       const locale = book.primaryLanguage || 'en';
 
       // Opening (and thereby creating) a search.db is not free, so probe
-      // cheaply first: a book with neither a local file nor an existing index
-      // is skipped without touching the database layer at all.
-      const localSize = await appService.getBookFileSize(book).catch(() => null);
-      if (localSize == null) {
+      // cheaply first: a book with neither a fetchable source nor an existing
+      // index is skipped without touching the database layer at all.
+      // isBookAvailable (not getBookFileSize, which only sizes 'managed'/
+      // 'external' local files) is used here because it also covers 'url'
+      // sources — a URL-hosted book has no local size but is perfectly
+      // fetchable, and getBookFileSize's null previously made every such
+      // book "unavailable" forever.
+      const bookAvailable = await appService.isBookAvailable(book).catch(() => false);
+      if (!bookAvailable) {
         const hasIndex = await appService
           .databaseExists(`${book.hash}/search.db`, 'Books')
           .catch(() => false);
@@ -672,10 +677,10 @@ export async function* searchLibraryBooks(
           sectionsCompleted: totalSections,
           totalSections,
         };
-      } else if (localSize == null) {
-        // A stale or incomplete index and no local file to rescan from: the
-        // db is a useless artifact that would cost a full database open on
-        // every future search, so delete it and skip.
+      } else if (!bookAvailable) {
+        // A stale or incomplete index and no fetchable source to rescan
+        // from: the db is a useless artifact that would cost a full
+        // database open on every future search, so delete it and skip.
         if (indexDb) {
           if (options.session) options.session.dropIndexDb(book);
           else {
